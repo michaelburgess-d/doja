@@ -1,12 +1,24 @@
+///// ---------- ---------- ---------- PREAMBLE ---------- ---------- ---------- /////
+
+#pragma region DoublePreambleHeader
+/// @brief Doubt: A Programming Language
 /// @author Michael Burgess <doubt@michaelburgess.co.uk>
+/// @note This is a work-in-progress, and not yet ready for use.
 
 /// This file is here to preview some initial work developing 
-/// a second-order probabilistic programming langauge 
-
+/// a second-order probabilistic programming language.  
 /// This is not the development version (which is local, and not released)
 ///... but a quick snapshot of some progress to provide some insight into the code. 
 
-/* EXAMPLE CODE:
+
+/// Compile with: 
+/// clang -std=c23 -DTEST -DEXAMPLES -o doubt_test doubt.c
+/// This will run the example code in `__glo_example1` below.
+
+
+
+/// @example
+/* EXAMPLE CODE (__glo_example1):
 
 const xs = [0, 1, 2, 3]
 const ys = [0, 1, 4, 6]
@@ -45,12 +57,6 @@ loop fn model() :=
 */
 
 
-
-
-
-// Doubt: A Programming Language
-// Compile with: clang -std=c23 -DTEST -DEXAMPLES -o doubt_test doubt.c
-
 // Compile (full): 
 // clang \
 //   -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -Wno-extra-semi\
@@ -62,10 +68,8 @@ loop fn model() :=
 //   -DEXAMPLES \
 //   -o doubt_test doubt.c"
 
-
-
-//// EXAMPLE CODE FOR `DOUBT`
-
+/// Debug with:
+/// lldb -o 'r' -o 'bt' -- ./doubt_test
 
 const char __glo_example1[] =
 "const xs = [0, 1, 2, 3]\n"
@@ -100,10 +104,9 @@ const char __glo_example1[] =
 "        return m + c + sigma\n";
 
 
-//// HEADERS
+#pragma endregion
 
-
-#pragma region InfoHeader
+#pragma region LicenseHeader
 
 #define DOUBT_VERSION "Version: v0.1"
 #define DOUBT_AUTHOR "Author: Michael J. Burgess (doubt@michaelburgess.co.uk)"
@@ -124,6 +127,11 @@ const char __glo_example1[] =
 #define DOUBT_LICENCE_LONG " @todo Please contact the author"
 
 #pragma endregion 
+
+
+///// ---------- ---------- ---------- HEADERS ---------- ---------- ---------- /////
+
+/// @headerfile internal.h
 
 #pragma region ConfiguringDefines 
 
@@ -759,7 +767,8 @@ void test_register(TestSuite *ts,  UnitTestFnPtr fn_ptr);
 #pragma endregion
 
 
-//// PARSING 
+/// @headerfile parsing.h
+
 #pragma region ParsingTokenHeader
 
 typedef enum TokenType {
@@ -1313,7 +1322,7 @@ AstNode *parse_mutation(ParseContext *p);
 #pragma endregion
 
 
-//// LANGUE NATIVE TYPES & LIB
+/// @headerfile native.h
 
 #pragma region BoxHeader 
 
@@ -2019,7 +2028,7 @@ Box native_round(BoxFn *self, BoxScope parent, BoxArray args);
 #pragma endregion
 
 
-//// INTERPRETER
+/// @headerfile interpreter.h
 
 #pragma region InterpErrorHeader 
 
@@ -2112,10 +2121,10 @@ Box BoxFn_ast_call(BoxFn *fn, BoxArray args, BoxScope parent);
 
 
 
-//////////    IMPLEMENTATION    //////////
+///---------- ---------- ---------- IMPLEMENTATION ---------- ---------- ----------//
 
 
-/// INTERNAL 
+/// @file internal.c
 
 #pragma region LoggingImpl
 
@@ -3492,9 +3501,7 @@ int internal_test_main(void) {
 #pragma endregion
 
 
-
-//// PARSING
-
+/// @file parsing.c
 
 #pragma region ParsingAstImpl
 #pragma endregion
@@ -6867,9 +6874,7 @@ void parsing_test_main() {
 #pragma endregion
 
 
-
-
-//// 
+/// @file native.c
 
 #pragma region NativeErrorImpl
 
@@ -8359,9 +8364,7 @@ void native_add_prelude(BoxScope scope) {
 #pragma endregion
 
 
-
-
-//// 
+/// @file interpreter.c
 
 #pragma region InterpErrorImpl 
 
@@ -9705,3 +9708,5 @@ int main(int argc, char **argv) {
 }
 
 #pragma endregion
+
+/// @note end of file
