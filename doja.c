@@ -1,9 +1,11 @@
-///// ---------- ---------- ---------- PREAMBLE ---------- ---------- ---------- /////
-
-#pragma region DoublePreambleHeader
 /// @brief Doubt: A Programming Language
 /// @author Michael Burgess <doubt@michaelburgess.co.uk>
 /// @note This is a work-in-progress, and not yet ready for use.
+
+///// ---------- ---------- ---------- PREAMBLE ---------- ---------- ---------- /////
+
+//#region Preamble_DoubtHeader
+#pragma region DoubtPreambleHeader
 
 /// This file is here to preview some initial work developing 
 /// a second-order probabilistic programming language.  
@@ -14,48 +16,6 @@
 /// Compile with: 
 /// clang -std=c23 -DTEST -DEXAMPLES -o doubt_test doubt.c
 /// This will run the example code in `__glo_example1` below.
-
-
-
-/// @example
-/* EXAMPLE CODE (__glo_example1):
-
-const xs = [0, 1, 2, 3]
-const ys = [0, 1, 4, 6]
-
-struct Person :=
-    /// @brief This is struct definition
-    /// @note This will be remembered on the scope
-    name : String 
-
-fn main() :=
-    demo()
-    log(1, 2)
-    log({city: "London"})
-    log(Person {name = "Michael"})
-    log(for( x <- range(1, 3) ) x)
-    log(infer(model(), #MCMC).take(3))
-
-fn demo() :=
-    loop 
-        i <- range(3)
-    in 
-        match i 
-            if 1 -> log("Yay")
-            else -> log("Nay")
-
-loop fn model() :=
-    let 
-        f = fn(x, a, b) -> a * x + b 
-        m = sample(normal(2, f(1, 2, 3)))
-        c = sample(normal(1, 2))
-        sigma = sample(gamma(1, 1))
-    in
-        log("x =", f(10, m, c))
-        observe(normal(f(10, m, c), sigma));
-        return m + c + sigma
-*/
-
 
 // Compile (full): 
 // clang \
@@ -71,6 +31,7 @@ loop fn model() :=
 /// Debug with:
 /// lldb -o 'r' -o 'bt' -- ./doubt_test
 
+
 const char __glo_example1[] =
 "const xs = [0, 1, 2, 3]\n"
 "const ys = [0, 1, 4, 6]\n"
@@ -80,7 +41,7 @@ const char __glo_example1[] =
 "    name : String \n"
 "fn main() :=\n"
 "    demo()\n"
-"    log(1, 2)\n"
+"    log(1, 2, xs, ys)\n"
 "    log({city: \"London\"})\n"
 "    log(Person {name = \"Michael\"})\n"
 "    log(for( x <- range(1, 3) ) x)\n"
@@ -105,7 +66,9 @@ const char __glo_example1[] =
 
 
 #pragma endregion
+//#endregion Preamble_DoubtHeader
 
+//#region Preamble_LicenseHeader
 #pragma region LicenseHeader
 
 #define DOUBT_VERSION "Version: v0.1"
@@ -126,13 +89,15 @@ const char __glo_example1[] =
 
 #define DOUBT_LICENCE_LONG " @todo Please contact the author"
 
-#pragma endregion 
+#pragma endregion
+//#endregion Preamble_LicenseHeader
 
 
 ///// ---------- ---------- ---------- HEADERS ---------- ---------- ---------- /////
 
 /// @headerfile internal.h
 
+//#region Internal_ConfiguringDefines 
 #pragma region ConfiguringDefines 
 
 // #ifdef TEST
@@ -144,8 +109,10 @@ const char __glo_example1[] =
     // #define DEBUG_MEMORY
 // #endif
 
-#pragma endregion 
+#pragma endregion
+//#endregion Internal_ConfiguringDefines
 
+//#region Internal_cIncludes 
 #pragma region cIncludes 
 
 #include <stdlib.h>
@@ -163,7 +130,9 @@ const char __glo_example1[] =
 #include <limits.h>
 
 #pragma endregion
+//#endregion Internal_cIncludes
 
+//#region Internal_MacroHelpers
 #pragma region MacroHelpers
 
 #define _STR_HELPER(x) #x
@@ -172,10 +141,12 @@ const char __glo_example1[] =
 #define _NUM_ARGS(...) ( sizeof( (void *[]){__VA_ARGS__} ) / sizeof(void *) )
 
 #pragma endregion
+//#endregion Internal_MacroHelpers
 
+//#region Internal_TimerHeader 
 #pragma region TimerHeader 
 
-struct {
+struct LastTime {
     struct timespec start;
     struct timespec end;
 } __glo_last_timer;
@@ -197,10 +168,12 @@ double timer_elapsed_ms() {
 
 
 #pragma endregion
+//#endregion Internal_TimerHeader
 
+//#region Internal_ArenaHeader
 #pragma region ArenaHeader
 
-typedef struct {
+typedef struct Arena {
     void **blocks;
     size_t *block_sizes;  // Array to track sizes of blocks
     size_t block_size;
@@ -224,7 +197,9 @@ void arena_test_main();
 #define ARENA_1MB (1024 * 1024)
 
 #pragma endregion
+//#endregion Internal_ArenaHeader
 
+//#region Internal_StringHeader
 #pragma region StringHeader
 
 
@@ -305,7 +280,7 @@ Str *str_split_chr(Str str, char delimiter, size_t *out_count);
 Str *str_lines(Str str, size_t *out_count);
 Str str_repeat(Str str, size_t count);
 Str str_fmt(Str format, ...);
-Str str_vfmt(Str format, va_list args);
+Str str_vec_fmt(Str format, va_list args);
 void str_free(Str str); 
 
 #define str_empty() ((Str) {0})
@@ -321,8 +296,10 @@ Str str_part(Str line, size_t start, size_t end);
 #define fmt(str) (int) str.length, str.cstr
 
 
-#pragma endregion 
+#pragma endregion
+//#endregion Internal_StringHeader
 
+//#region Internal_LoggingHeader
 #pragma region LoggingHeader
 
 typedef enum LogLevel {
@@ -433,7 +410,9 @@ void log_message(LogLevel level, Str format, ...) {
 
 
 #pragma endregion
+//#endregion Internal_LoggingHeader
 
+//#region Internal_DebugHeader
 #pragma region DebugHeader
 /// @brief Behaviour which will compile-away given non-debug status
 #define NOOP ((void) 0)
@@ -443,13 +422,14 @@ void log_message(LogLevel level, Str format, ...) {
     #define sMSG(message) \
         s(__FILE__ ":" _STR(__LINE__) ": " message)
 
-    static inline Str str_debug_message(const char *message, const char *func, const char *file, int line) {
-        static char buffer[256];
-        snprintf(buffer, sizeof(buffer), "%s (%s) %s:%d", message, func, file, line); 
-        return (Str){ .cstr = buffer, .length = strlen(buffer) };
-    }
+    /// @todo unused
+    // static inline Str str_debug_message(const char *message, const char *func, const char *file, int line) {
+    //     static char buffer[256];
+    //     snprintf(buffer, sizeof(buffer), "%s (%s) %s:%d", message, func, file, line); 
+    //     return (Str){ .cstr = buffer, .length = strlen(buffer) };
+    // }
 
-    #define sBUF(message) str_debug_message(message, __func__, __FILE__, __LINE__)
+    // #define sBUF(message) str_debug_message(message, __func__, __FILE__, __LINE__)
 
     #define debugger\
         str_println(sMSG("<- Debugger: HERE! ->\n\n")); \
@@ -486,7 +466,9 @@ void log_message(LogLevel level, Str format, ...) {
     
 
 #pragma endregion
+//#endregion Internal_DebugHeader
 
+//#region Internal_ErrorHeader
 #pragma region ErrorHeader
 
 
@@ -494,7 +476,9 @@ void log_message(LogLevel level, Str format, ...) {
 #define error_never() log_message(LL_ERROR, sMSG("Unreachable!"))
 
 #pragma endregion
+//#endregion Internal_ErrorHeader
 
+//#region Internal_ArrayHelperHeader 
 #pragma region ArrayHelperHeader 
 /// @todo: maybe, _SIZE_SMALL_BRIEF, and _LONGLIVE = 32, 16 
 #define ARRAY_SIZE_SMALL 16
@@ -508,7 +492,9 @@ void log_message(LogLevel level, Str format, ...) {
 
 
 #pragma endregion
+//#endregion Internal_ArrayHelperHeader
 
+//#region Internal_HeapHeader
 #pragma region HeapHeader
 
 #define HEAP_BASE_CAPACITY 8 * (1022 * 1024) // 8 MB
@@ -528,7 +514,7 @@ static const size_t PRIMES[] = {
 };
 static const size_t NUM_PRIMES = sizeof(PRIMES) / sizeof(PRIMES[0]);
 
-static inline size_t next_capacity(size_t initial_capacity) {
+static inline size_t HeapArray_next_capacity(size_t initial_capacity) {
     for (size_t i = 0; i < NUM_PRIMES; i++) {
         if (PRIMES[i] >= initial_capacity) {
             return PRIMES[i];
@@ -563,14 +549,28 @@ typedef enum HeapObjectType {
 struct Heap;
 
 // Structure representing an object in the heap
-typedef struct HeapObject {
-    HeapObjectType type;
-    size_t size;            // Size of the data
-    void *data;             // Pointer to the actual data
-    bool marked;            // GC marking flag
+
+/// @brief metadata attributes
+typedef struct HeapMetaGc {
+    HeapObjectType status;
     struct HeapObject *next;  // For free list chaining
-    struct Heap *heap;     // Pointer back to the heap
+    bool marked;        // GC marking flag
+} HeapMetaGc;
+
+/// @note data/payload attributes
+typedef struct HeapMetaData {
+    uint8_t type;           // Type of the data
+    size_t size;            // Size of the data
+    size_t capacity;        // Capacity of the data
+} HeapMetaData;
+
+typedef struct HeapObject {
+    HeapMetaData info;
+    HeapMetaGc gc;
+    void *data;             // Pointer to the actual data
 } HeapObject;
+
+
 
 // Structure representing the heap
 typedef struct Heap {
@@ -582,23 +582,73 @@ typedef struct Heap {
     size_t generation_count;    // Track GC cycles
 } Heap;
 
-// Function prototypes
-void heap_init(Heap *h, size_t initial_capacity, size_t gc_threshold);
-HeapObject* heap_alloc_object(Heap *heap, HeapObjectType type, size_t size);
-void* heap_alloc(Heap *heap, size_t size);
-void* heap_realloc(Heap *heap, void *ptr, size_t old_size, size_t new_size);
-GCError heap_free_object(Heap *heap, HeapObject *obj);
-void heap_free(Heap *heap);
-void heap_print(const Heap *heap);
-void heap_debug_dump(const Heap *heap);
 
-// void gc_run(Heap *heap, Box *roots, size_t root_count);
-// void gc_mark(Heap *heap, HeapObject *obj);
-// void gc_sweep(Heap *heap);
+void heap_init(Heap *h, size_t initial_capacity, size_t gc_threshold) {
+    h->free_list = NULL;
+    h->objects = calloc(initial_capacity, sizeof(HeapObject *));
+    h->capacity = initial_capacity;
+    h->size = 0;
+    h->gc_threshold = gc_threshold;
+    h->generation_count = 0;
+}
+
+void *heap_alloc(Heap *heap, size_t size, uint8_t type) {
+    HeapObject *obj = NULL;
+
+    // Reuse from free list if available
+    if (heap->free_list) {
+        obj = heap->free_list;
+        heap->free_list = heap->free_list->gc.next;
+    } else {
+        // Expand the objects array if necessary
+        if (heap->size >= heap->capacity) {
+            size_t new_capacity = HeapArray_next_capacity(heap->capacity);
+            HeapObject **new_objects = realloc(heap->objects, sizeof(HeapObject *) * new_capacity);
+            if (!new_objects) {
+                log_message(LL_ERROR, sMSG("Heap allocation failed: no space to expand objects array."));
+                return NULL;
+            }
+            memset(new_objects + heap->capacity, 0, sizeof(HeapObject *) * (new_capacity - heap->capacity));
+            heap->objects = new_objects;
+            heap->capacity = new_capacity;
+        }
+
+        // Allocate new HeapObject
+        obj = calloc(1, sizeof(HeapObject));
+        if (!obj) {
+            log_message(LL_ERROR, sMSG("Heap allocation failed: unable to allocate HeapObject."));
+            return NULL;
+        }
+        obj->gc.marked = false;
+        obj->gc.next = NULL;
+        heap->objects[heap->size++] = obj;
+    }
+
+    obj->info.type = type;
+    obj->info.size = size;
+    obj->info.capacity = size;
+    obj->data = calloc(1, size);
+    if (!obj->data) {
+        log_message(LL_ERROR, sMSG("Heap allocation failed: unable to allocate object data."));
+        // Return obj to free list
+        obj->info.type = HEAP_DEAD;
+        return NULL;
+    }
+
+    return obj->data;
+}
+
+void heap_destroy(Heap *heap);
+
+void heap_gc_mark(Heap *heap, HeapObject *obj);
+void heap_gc_free(HeapObject *obj);
+void heap_gc_sweep();
 
 
 #pragma endregion
+//#endregion Internal_HeapHeader
 
+//#region Internal_TracebackHeader
 #pragma region TracebackHeader
 
 typedef struct TraceEntry {
@@ -619,7 +669,9 @@ void tracer_print_stack(CallStack *traces, size_t depth);
 void tracer_push(CallStack *traces, Str fn_name, Str arg, Str file, size_t line);
 
 #pragma endregion
+//#endregion Internal_TracebackHeader
 
+//#region Internal_PerformanceAndProfilingHeader
 #pragma region PerformanceAndProfilingHeader
 
 /// @note profiling prototypes 
@@ -630,7 +682,9 @@ double perf_timer_elapsed_ms();
 
 
 #pragma endregion
+//#endregion Internal_PerformanceAndProfilingHeader
 
+//#region Internal_GlobalContext
 #pragma region GlobalContext
 
 
@@ -646,7 +700,7 @@ struct Memory {
     Arena ar_parser;
     Arena ar_interp_local;
     Arena ar_interp_global;
-    Heap heap_interp_gc;
+    Heap    heap_interp_gc;
 } __glo_memory = {0};
 
 #define mem() &__glo_memory
@@ -655,8 +709,11 @@ struct InternalContext {
     // Arena *ar_static;
     Heap *heap;
     Arena *arena;
-    void *(*malloc)(size_t);
-    // void *(*realloc)(void*, size_t, size_t);
+    void *(*alloc)(size_t);
+    void *(*dynalloc)(size_t, uint8_t);
+
+    void *(*calloc)(size_t, size_t);
+    void *(*realloc)(void*, size_t);
     void (*free)(void *);
     CallStack *callstack;
 } __glo_internal_context = {0};
@@ -677,16 +734,23 @@ void *ictx_arena_alloc(size_t size) {
     return arena_alloc(ctx().arena, size);
 }
 
-void *ictx_arena_realloc(void *mem, size_t old_size, size_t new_size) {
-    return arena_realloc(ctx().arena, mem, old_size, new_size);
+// void *ictx_arena_realloc(void *mem, size_t old_size, size_t new_size) {
+//     return arena_realloc(ctx().arena, mem, old_size, new_size);
+// }
+
+void *ictx_heap_alloc(size_t size, uint8_t type) {
+    return heap_alloc(ctx().heap, size, type);
 }
 
 void ictx_setup(struct InternalContext *ictx, Heap *heap, Arena *ar_static, Arena *arena) {
     ictx->callstack = arena_alloc(ar_static, sizeof(CallStack));
     ictx->arena = arena;
     ictx->heap = heap;
-    ictx->malloc = ictx_arena_alloc;
+    ictx->alloc = ictx_arena_alloc;
+    ictx->calloc = calloc;
+    ictx->realloc = realloc;
     ictx->free = arena_free;
+    ictx->dynalloc = ictx_heap_alloc;
 
     heap_init(ictx->heap, 
         HEAP_BASE_CAPACITY, 
@@ -701,7 +765,9 @@ void ictx_setup(struct InternalContext *ictx, Heap *heap, Arena *ar_static, Aren
 
 
 #pragma endregion
+//#endregion Internal_GlobalContext
 
+//#region Internal_CliHeader
 #pragma region CliHeader
 
 typedef struct CliOption {
@@ -724,10 +790,14 @@ void cli_parse_args(int argc, char **argv, CliOption *out_opts, size_t num_opts)
 
 
 #pragma endregion
+//#endregion Internal_CliHeader
 
+//#region Internal_JsonHeader
 #pragma region JsonHeader
 #pragma endregion
+//#endregion Internal_JsonHeader
 
+//#region Internal_UnitTestHeader
 #pragma region UnitTestHeader
 
 typedef struct TestReport {
@@ -765,10 +835,12 @@ void test_register(TestSuite *ts,  UnitTestFnPtr fn_ptr);
     test_report_push(report, (bool) (expr), s(message TEST_STR(expr))) 
 
 #pragma endregion
+//#endregion Internal_UnitTestHeader
 
 
 /// @headerfile parsing.h
 
+//#region Parsing_TokenHeader
 #pragma region ParsingTokenHeader
 
 typedef enum TokenType {
@@ -840,7 +912,9 @@ typedef struct Token {
 // Str lexer_tokens_to_json(Token *tokens, size_t num_tokens);
 
 #pragma endregion
+//#endregion
 
+//#region Parsing_AstHeader 
 #pragma region ParsingAstHeader 
 
 typedef enum AstType {
@@ -1216,7 +1290,9 @@ Str ast_match_to_json(AstNode *node, size_t indent) ;
 Str ast_mutation_to_json(AstNode *node, size_t indent) ;
 
 #pragma endregion
+//#endregion
 
+//#region Parsing_Context
 #pragma region ParseContext
 
 typedef struct ParseContext ParseContext;
@@ -1271,7 +1347,9 @@ void parsing_ctx_print() {
 }
 
 #pragma endregion
+//#endregion
 
+//#region Parsing_Header
 #pragma region ParsingHeader
 void lex(Lexer *lex, Source *src);
 bool lex_is_keyword(Str s);
@@ -1320,10 +1398,12 @@ AstNode *parse_post_anon(ParseContext *p);
 AstNode *parse_mutation(ParseContext *p);
 
 #pragma endregion
+//#endregion
 
 
 /// @headerfile native.h
 
+//#region Native_BoxHeader 
 #pragma region BoxHeader 
 
 /// @note Box is the internal type of objects for the interpreter
@@ -1340,42 +1420,60 @@ AstNode *parse_mutation(ParseContext *p);
 
 // max 16 types
 typedef enum BoxType {
+    /// @brief Unboxed types 
+    ///     (ie.,  copy/return-safe, copy-by-value, fixed size, no alloc/GC)
     BT_STATUS = 0, 
     BT_INT = 1,
     BT_BOOL = 2,
     BT_FLOAT = 3,
-    BT_TAG = 4,
-    BT_BOX_DOUBLE = 5,
-    BT_BOX_STRING = 6,
-    BT_BOX_ARRAY = 7,
-    BT_BOX_DICT = 8,
-    BT_BOX_STRUCT = 9,
-    BT_BOX_OBJECT = 10,
-    BT_BOX_FN = 11,
+
+    /// @note a tag is a 11-char (unboxed) string
+    BT_TAG = 4, 
+
+    /// @brief Boxed struct types
+    ///    (ie., copy/return unsafe, copy-by-ref, arena allocated, no GC)
+    /// Typically created by the interpreter for internal use
+    /// Two relevant arenas: global and local
+    ///  Function stack frames are allocated on the local arena
+    ///  Global variables and constants are allocated on the global arena
+    ///     The global arena is never freed, 
+    ///         the local arena is freed on function exit.
+    BT_BOX_STRING = 5,  
+    BT_BOX_ARRAY = 6,   //eg., function arguments
+    BT_BOX_DICT = 7,    //eg., scopes, function locals
+    BT_BOX_STRUCT = 8,
+    BT_BOX_FN = 9,
+
+    /// @brief Garbage collected types
+    ///    (ie., copy-by-ref, heap allocated, GC)
+    BT_DYN_DOUBLE = 10,
+    BT_DYN_OBJECT = 11,
     BT_DYN_STRING = 12,
-    BT_DYN_DICT = 13,
-    BT_DYN_ARRAY = 14,
-    BT_ERROR = 15,
+    BT_DYN_COLLECTION = 13,
+    BT_DYN_FN = 14,
+
+    /// @brief Error type
+    BT_BOX_ERROR = 15,
 } BoxType;
 
 Str bt_nameof(BoxType bt) {
     const char *names[] = {
-        [BT_STATUS] = "box(status)",
-        [BT_INT] = "box(int)",
-        [BT_BOOL] = "box(bool)",
-        [BT_FLOAT] = "box(float)",
-        [BT_TAG] = "box(tag)",
-        [BT_BOX_DOUBLE] = "unbox(double)",
-        [BT_BOX_STRING] = "unbox(string)",
-        [BT_BOX_ARRAY] = "unbox(array)",
-        [BT_BOX_DICT] = "unbox(dict)",
-        [BT_BOX_STRUCT] = "unbox(struct)",
-        [BT_BOX_OBJECT] = "unbox(object)",
-        [BT_BOX_FN] = "unbox(fn)",
-        [BT_DYN_STRING] = "unbox(dyn_string)",
-        [BT_DYN_DICT] = "unbox(dyn_dict)",
-        [BT_DYN_ARRAY] = "unbox(dyn_array)",
-        [BT_ERROR] = "box(error)",
+        [BT_STATUS] = "unbox(status)",
+        [BT_INT] = "unbox(int)",
+        [BT_BOOL] = "unbox(bool)",
+        [BT_FLOAT] = "unbox(float)",
+        [BT_TAG] = "unbox(tag)",
+        [BT_DYN_DOUBLE] = "box(double)",
+        [BT_BOX_STRING] = "box(string)",
+        [BT_BOX_ARRAY] = "box(array)",
+        [BT_BOX_DICT] = "box(dict)",
+        [BT_BOX_STRUCT] = "box(struct)",
+        [BT_BOX_FN] = "box(fn)",
+        [BT_DYN_OBJECT] = "box(dyn object)",
+        [BT_DYN_STRING] = "box(dyn string)",
+        [BT_DYN_COLLECTION] = "box(dyn collection)",
+        [BT_DYN_FN] = "box(dyn fn)",
+        [BT_BOX_ERROR] = "box(error)",
     };
 
     return str_from_cstr(names[bt]);
@@ -1423,7 +1521,9 @@ bool box_eq(Box a, Box b);
 void box_free(Box b);
 
 #pragma endregion
+//#endregion
 
+//#region Native_ComplexBoxTypes
 #pragma region ComplexBoxTypes
 
 
@@ -1479,23 +1579,41 @@ typedef struct BoxArray {
     Box *elements;    // Array of Box elements
 } BoxArray;
 
-typedef enum DynArrayType {
-    AT_VECTOR = 'v',
-    AT_SET = 's',
-    AT_QUEUE = 'Q',
-    AT_STACK = 'S',
-} DynArrayType;
+
+typedef enum DynCollectionType {
+    /// @brief generic collection type
+    DYN_CT_ARRAY = 'a',
+    DYN_CT_QUEUE = 'q',
+    DYN_CT_STACK = 'k',
+    DYN_CT_DICT = 'd',      /// @note (Str, Box)
+    DYN_CT_SET = 's',
+
+    DYN_CT_VEC_BOOL = 'B',
+    DYN_CT_VEC_DOUBLE = 'D',
+    DYN_CT_VEC_INT = 'I',
+    DYN_CT_VEC_STRING = 'S',
+    DYN_CT_VEC_CHAR = 'C',
+} DynCollectionType;
+
+typedef struct DynCollection {
+    HeapMetaData info;
+    HeapMetaGc gc;
+} DynCollection;
+
+#define dyn_size(dc) (dc->info.size)
+#define dyn_capacity(dc) (dc->info.capacity)
+#define dyn_type(dc) (dc->info.type)
+
+
 
 
 /// @brief A generic collection type
 /// @note Supports vector (random access), set, queue and stack APIs
 ///     ... API methods check the `type` to ensure its correct
 typedef struct DynArray {
-    DynArrayType type;
+    HeapMetaData info;
+    HeapMetaGc gc;
     Box *elements;          
-    size_t size;            
-    size_t capacity;        
-    HeapObject *heap_obj;   
 } DynArray;
 
 typedef struct DynDictEntry {
@@ -1506,28 +1624,56 @@ typedef struct DynDictEntry {
 } DynDictEntry;
 
 typedef struct DynDict {
+    HeapMetaData info;
+    HeapMetaGc gc;
     DynDictEntry *entries;        // Array of dictionary entries
-    size_t size;               // Number of key-value pairs
-    size_t capacity;           // Total capacity of the hash table
-    HeapObject *heap_obj;      // Reference to HeapObject for GC
 } DynDict;
 
 
 typedef struct DynSet {
+    HeapMetaData info;
+    HeapMetaGc gc;
     Box *elements;          // Array of Box elements for separate chaining
-    size_t size;            // Number of elements in the set
-    size_t capacity;        // Total capacity (number of buckets)
-    HeapObject *heap_obj;   // Reference to HeapObject for GC
 } DynSet;
 
 
 // Structure representing a dynamic string
 typedef struct DynString {
-    char *data;       // Pointer to the string data (null-terminated)
-    size_t length;    // Current length of the string
-    size_t capacity;  // Allocated capacity
-    HeapObject *heap_obj;   // Reference to HeapObject for GC
+    HeapMetaData info;
+    HeapMetaGc gc;
+    char *cstr;       // Pointer to the string data (null-terminated)
 } DynString;
+
+
+typedef struct DynVecDouble {
+    HeapMetaData info;
+    HeapMetaGc gc;
+    double *elements;          
+} DynVecDouble;
+
+typedef struct DynVecInt {
+    HeapMetaData info;
+    HeapMetaGc gc;
+    int *elements;          
+} DynVecInt;
+
+typedef struct DynVecString {
+    HeapMetaData info;
+    HeapMetaGc gc;
+    Str *elements;          
+} DynVecString;
+
+typedef struct DynVecChar {
+    HeapMetaData info;
+    HeapMetaGc gc;
+    char *elements;          
+} DynVecChar;
+
+typedef struct DynVecBool {
+    HeapMetaData info;
+    HeapMetaGc gc;
+    bool *elements;          
+} DynVecBool;
 
 
 typedef Str BoxString; 
@@ -1549,10 +1695,11 @@ typedef struct BoxStruct {
 /// @brief 
 /// @todo consider whether there should be object types
 ///     .... eg., class objects, internal objects... cf. PyObject
-typedef struct BoxObject {
+typedef struct DynObject {
+    HeapObject *gc_header;  
     BoxStruct *def;
     BoxScope namespace;
-} BoxObject;
+} DynObject;
 
 typedef struct BoxIterator {
     size_t iter_index;
@@ -1621,7 +1768,9 @@ typedef struct BoxAsyncFn  {
 } BoxAsyncFn;
 
 #pragma endregion
+//#endregion ComplexBoxTypes
 
+//#region Native_BoxApiHeader
 #pragma region BoxApiHeader
 
 
@@ -1658,6 +1807,8 @@ bool box_try_numeric(Box box, double *out_value);
 size_t box_hash(Box box);
 Str box_unpack_str(Box box);
 
+Str DynCollection_to_repr(DynCollection *col);
+
 void BoxArray_new_elements(BoxArray *array, size_t num_elements);
 Str BoxArray_to_repr(BoxArray *array);
 Box BoxArray_set(BoxArray *box_array, Box element, size_t index);
@@ -1671,18 +1822,18 @@ void DynDict_new_entries(DynDict *dict, size_t num_entries);
 DynDict *DynDict_new(size_t initial_capacity);
 bool DynDict_find(DynDict *dict, Box key, DynDictEntry *out);
 void DynDict_free(DynDict *dict);
-void DynDict_set(DynDict *dict, Box key, Box val);
+Box DynDict_set(DynDict *dict, Box key, Box val);
 DynArray *DynArray_new(size_t initial_capacity);
-Box DynArray_add(DynArray *array, Box element);
+Box DynArray_append(DynArray *array, Box element);
 Box DynArray_get(const DynArray *array, size_t index);
 Box DynArray_overwrite(DynArray *array, size_t index, Box element);
 Box DynArray_weak_remove(DynArray *array, size_t index);
 void DynArray_free(DynArray *array);
 void DynArray_debug_print(const DynArray *array);
-Str BoxObject_to_repr(BoxObject *obj);
-Box BoxObject_get_attribute(BoxObject *obj, Str name);
-Box BoxObject_get_attribute_checked(BoxObject *obj, Str name, BoxType expected_type);
-Box BoxObject_resolve_method(Box obj, BoxScope *scope, Str name);
+Str DynObject_to_repr(DynObject *obj);
+Box DynObject_get_attribute(DynObject *obj, Str name);
+Box DynObject_get_attribute_checked(DynObject *obj, Str name, BoxType expected_type);
+Box DynObject_resolve_method(Box obj, BoxScope *scope, Str name);
 Str BoxDict_to_repr(BoxDict *d);
 void BoxDict_new_entries(BoxDict *dict, size_t num_buckets);
 Box BoxDict_get(BoxDict *dict, Str key);
@@ -1707,10 +1858,10 @@ static BoxFn *BoxFn_new(BoxFnType type, Str name,
     BoxDict args_defaults, BoxScope closure_scope, void *fn_ptr, void *code);
 Box BoxFn_call(BoxFn *ffn, BoxScope scope, BoxArray args);
 BoxStruct *BoxStruct_new(Str name, size_t num_fields);
-BoxObject *BoxObject_new(BoxStruct *def);
-BoxObject *BoxObject_from_BoxDict(BoxStruct *def, BoxDict fields);
-void BoxObject_set_field(BoxObject *obj, Str field, Box value);
-bool BoxObject_get_field(BoxObject *obj, Str field, Box *out_value);
+DynObject *DynObject_new(BoxStruct *def);
+DynObject *DynObject_from_BoxDict(BoxStruct *def, BoxDict fields);
+void DynObject_set_field(DynObject *obj, Str field, Box value);
+bool DynObject_get_field(DynObject *obj, Str field, Box *out_value);
 
 BoxArray *cliargs_as_BoxArray(int argc, char **argv);
 double lib_rand_0to1();
@@ -1751,11 +1902,11 @@ Box DynArray_to_BoxArray(DynArray *array);
 Box DynArray_clear(DynArray *array);
 Box DynArray_contains_byhash(DynArray *array);
 Box DynArray_contains_byvalue(DynArray *array);
-Box DynArray_add(DynArray *array, Box element);
-Box DynArray_add_first(DynArray *array);
-Box DynArray_add_last(DynArray *array);
-Box DynArray_add_offer(DynArray *array, Box element);
-Box DynArray_add_unique(DynArray *array, Box element);
+Box DynArray_append(DynArray *array, Box element);
+Box DynArray_append_first(DynArray *array);
+Box DynArray_append_last(DynArray *array);
+Box DynArray_append_offer(DynArray *array, Box element);
+Box DynArray_append_unique(DynArray *array, Box element);
 Box DynArray_get(const DynArray *array, size_t index);
 Box DynArray_set_add(DynArray *array, size_t index, Box element);
 Box DynArray_set_overwrite(DynArray *array, size_t index, Box element);
@@ -1775,7 +1926,6 @@ Box DynArray_last(DynArray *array);
 Box DynArray_remove_last(DynArray *array);
 Box DynArray_indexof(DynArray *array);
 
-void DynDict_set(DynDict *dict, Box key, Box val);
 
 void BoxDict_new_entries(BoxDict *dict, size_t num_entires);
 void BoxDict_set(BoxDict *dict, Str key, Box value);
@@ -1785,12 +1935,14 @@ bool BoxDict_find(BoxDict *dict, Str key, BoxKvPair *out);
 void BoxDict_merge(BoxDict *dest, BoxDict *src);
 Str BoxDict_to_repr(BoxDict *array);
 
-Str BoxObject_to_repr(BoxObject *obj);
+Str DynObject_to_repr(DynObject *obj);
 
 bool BoxScope_lookup(BoxScope *scope, Str name, Box *out_value);
 
 #pragma endregion
+//#endregion
 
+//#region Native_BoxMacroHelpers
 #pragma region BoxMacroHelpers
 /// @todo -- check which of these are not in use and remove
 
@@ -1800,13 +1952,13 @@ typedef int BT_INT_T;
 typedef bool BT_BOOL_T;
 typedef float BT_FLOAT_T;
 typedef Str BT_TAG_T;
-typedef double * BT_BOX_DOUBLE_T;
+typedef double * BT_DYN_DOUBLE_T;
 typedef BoxString * BT_BOX_STRING_T;
 typedef BoxArray * BT_BOX_ARRAY_T;
 typedef BoxDict * BT_BOX_DICT_T;
 typedef BoxStruct * BT_BOX_STRUCT_T;
-typedef BoxError * BT_ERROR_T;
-typedef BoxObject * BT_BOX_OBJECT_T;
+typedef BoxError * BT_BOX_ERROR_T;
+typedef DynObject * BT_DYN_OBJECT_T;
 typedef BoxFn * BT_BOX_FN_T;
 typedef DynString * BT_DYN_STRING_T;
 typedef DynDict * BT_DYN_DICT_T;
@@ -1830,9 +1982,10 @@ typedef uint8_t BT_STATUS_T;
 #define box_unpack_iter(box) box_unpack_ptr(BoxIterator, box)
 #define box_unpack_fn(box) box_unpack_ptr(BoxFn, box)
 #define box_unpack_gen(box) box_unpack_ptr(BoxGenFn, box)
-#define box_unpack_object(box) box_unpack_ptr(BoxObject, box)
+#define box_unpack_object(box) box_unpack_ptr(DynObject, box)
 #define box_unpack_struct(box) box_unpack_ptr(BoxStruct, box)
 #define box_unpack_scope(box) box_unpack_ptr(BoxScope, box)
+#define box_unpack_DynCollection(box) box_unpack_ptr(DynCollection, box)
 #define box_unpack_DynArray(box) box_unpack_ptr(DynArray, box)
 #define box_unpack_DynDict(box) box_unpack_ptr(DynDict, box)
 #define box_unpack_DynString(box) box_unpack_ptr(DynString, box)
@@ -1842,17 +1995,15 @@ typedef uint8_t BT_STATUS_T;
 #define box_pack_bool(bool_value) ((Box) {.payload = (uint64_t) bool_value, .type=BT_BOOL})
 #define box_pack_ptr(ptr_type, ptr_value) ((Box) {.payload = (uint64_t) ptr_value, .type=ptr_type})
 
-#define box_pack_error(ptr) box_pack_ptr(BT_ERROR, ptr)
-#define box_pack_double(ptr) box_pack_ptr(BT_BOX_DOUBLE, ptr)
+#define box_pack_error(ptr) box_pack_ptr(BT_BOX_ERROR, ptr)
+#define box_pack_double(ptr) box_pack_ptr(BT_DYN_DOUBLE, ptr)
 #define box_pack_string(ptr) box_pack_ptr(BT_BOX_STRING, ptr)
 #define box_pack_array(ptr) box_pack_ptr(BT_BOX_ARRAY, ptr)
 #define box_pack_fn(ptr) box_pack_ptr(BT_BOX_FN, ptr)
-#define box_pack_object(ptr) box_pack_ptr(BT_BOX_OBJECT, ptr)
+#define box_pack_object(ptr) box_pack_ptr(BT_DYN_OBJECT, ptr)
 #define box_pack_struct(ptr) box_pack_ptr(BT_BOX_STRUCT, ptr)
 #define box_pack_dict(ptr) box_pack_ptr(BT_BOX_DICT, ptr)
-#define box_pack_DynArray(ptr) box_pack_ptr(BT_DYN_ARRAY, ptr)
-#define box_pack_DynDict(ptr) box_pack_ptr(BT_DYN_DICT, ptr)
-#define box_pack_DynString(ptr) box_pack_ptr(BT_DYN_STRING, ptr)
+#define box_pack_DynCollection(ptr) box_pack_ptr(BT_DYN_COLLECTION, ptr)
 
 
 static inline Box box_pack_float(float float_value) {
@@ -1944,7 +2095,7 @@ bool box_tag_eq(Box tag, Str value) {
 #define unbox_checked(box, ub_type)\
     box_is_ptr(box) ? box_unpack_##ub_type(box_unpack_ptr(box)) : box_error()
 
-#define unbox(box, ub_type) box_unpack_##ub_type(box_unpack_ptr(box)) 
+#define box(box, ub_type) box_unpack_##ub_type(box_unpack_ptr(box)) 
 
 #define box_typeof(box) bt_nameof(box.type)
 
@@ -1953,11 +2104,11 @@ bool box_tag_eq(Box tag, Str value) {
 #define box_halt() box_status(BS_HALT)
 #define box_true()  ((Box) {.payload = (uint64_t) 1, .type = BT_BOOL})
 #define box_false() ((Box) {.payload = (uint64_t) 0, .type = BT_BOOL})
-#define box_error_empty() ((Box) {.payload = (uint64_t) 0, .type = BT_ERROR})
+#define box_error_empty() ((Box) {.payload = (uint64_t) 0, .type = BT_BOX_ERROR})
 #define box_done() box_status(BS_DONE)
 
 // #define box_is_ptr(box) (box.type == BT_BOX_PTR)
-#define box_is_error(box) (box.type == BT_ERROR)
+#define box_is_error(box) (box.type == BT_BOX_ERROR)
 #define box_is_null(box) (box.type == BT_STATUS && box.payload == BS_NULL)
 #define box_is_status(box, cs_type) (box.type == BT_STATUS && box.payload == cs_type)
 #define box_is_status_end(box) (box.type == BT_STATUS && box.payload >= BS_BREAK && box.payload <= BS_YIELD)
@@ -1974,7 +2125,9 @@ static inline bool box_is_truthy(Box box) {
 
 
 #pragma endregion
+//#endregion
 
+//#region Native_BoxErrorTypeHeader
 #pragma region BoxErrorTypeHeader
 
 static BoxError __glo_error_stack[ARRAY_SIZE_SMALL] = {0};
@@ -1997,7 +2150,9 @@ void error_print(BoxError error);
 
 
 #pragma endregion
+//#endregion
 
+//#region Native_NativesHeader
 #pragma region NativesHeader
 void native_add_prelude(BoxScope scope);
 
@@ -2026,10 +2181,12 @@ Box native_ceil(BoxFn *self, BoxScope parent, BoxArray args);
 Box native_round(BoxFn *self, BoxScope parent, BoxArray args);
 
 #pragma endregion
+//#endregion
 
 
 /// @headerfile interpreter.h
 
+//#region Interpreter_ErrorHeader 
 #pragma region InterpErrorHeader 
 
 #ifdef INTERP_DEBUG_VERBOSE
@@ -2046,7 +2203,9 @@ Box native_round(BoxFn *self, BoxScope parent, BoxArray args);
     interp_graceful_exit()
 
 #pragma endregion
+//#endregion
 
+//#region Interpreter_BoxedPrecache
 #pragma region BoxedPrecache
 
 
@@ -2063,7 +2222,9 @@ struct BoxPreCache {
 #define interp_precache() __glo_precache
 
 #pragma endregion
+//#endregion
 
+//#region Interpreter_EvaluatorHeader
 #pragma region InterpreterEvaluatorHeader
 
 void interp_graceful_exit();
@@ -2106,7 +2267,9 @@ Box interp_eval_object_literal(AstNode *node, BoxScope *scope);
 Box interp_eval_load_module(AstNode *node);
 
 #pragma endregion
+//#endregion
 
+//#region Interpreter_MinimalRuntimeHeader
 #pragma region InterpreterMinimalRuntimeHeader
 Box interp_eval_fn(Box fn_obj, int num_args, Box *args);
 Box interp_eval_uop(Str op, Box operand);
@@ -2118,6 +2281,7 @@ Box interp_eval_ast(AstNode *node, BoxScope *scope);
 Box BoxFn_ast_call(BoxFn *fn, BoxArray args, BoxScope parent);
 
 #pragma endregion
+//#endregion
 
 
 
@@ -2126,6 +2290,7 @@ Box BoxFn_ast_call(BoxFn *fn, BoxArray args, BoxScope parent);
 
 /// @file internal.c
 
+//#region Internal_LoggingImpl
 #pragma region LoggingImpl
 
 void logging_test_main() {
@@ -2136,7 +2301,7 @@ void logging_test_main() {
     log_message(LL_RECOVERABLE, s("This is a recoverable message."));
     log_message(LL_TEST, s("This is a test message."));
     
-    /// @todo this doesnt work atm, fix it 
+    /// @todo this doesn't work atm, fix it 
     
     // #ifdef DEBUG_ABORT_ON_ERROR
     //     #undef DEBUG_ABORT_ON_ERROR
@@ -2158,8 +2323,10 @@ void logging_test_main() {
 }
 
 
-#pragma endregion 
+#pragma endregion
+//#endregion Preamble_LoggingImpl
 
+//#region Internal_StringImpl
 #pragma region StringImpl
 
 /// @todo rename to indicate allocators vs. views vs. borrows/etc.
@@ -2168,7 +2335,7 @@ void logging_test_main() {
 Str str_new(const char *cstr, size_t len) {
     if (!cstr) return str_empty();
 
-    char *buffer =  (char *) ctx().malloc(len);
+    char *buffer =  (char *) ctx().alloc(len);
 
     if (!buffer) { error_oom(); return str_empty(); }
 
@@ -2182,7 +2349,7 @@ Str str_with_col(const char *color_code, Str str) {
     size_t new_length = color_len + str.length + reset_len;
 
     // Allocate memory for the new colored string
-    char *buffer = ctx().malloc(new_length + 1);
+    char *buffer = ctx().alloc(new_length + 1);
     if (!buffer) {
         error_oom();
         return str_empty();
@@ -2231,7 +2398,7 @@ Str str_read_file(const char *filename) {
     size_t size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char *buffer = (char *) ctx().malloc(size + 1);
+    char *buffer = (char *) ctx().alloc(size + 1);
     if (!buffer) { error_oom(); return str_empty(); }
 
     size_t read = fread(buffer, 1, size, file);
@@ -2342,8 +2509,12 @@ Str str_chr(char chr) {
 
 // Concatenate two Str instances
 Str str_concat(Str left, Str right) {
+    if(left.length == 0 && right.length == 0) return str_empty();
+    if(right.length == 0) return left;
+    if(left.length == 0) return right;
+
     size_t new_len = left.length + right.length;
-    char *buffer = (char *) ctx().malloc(new_len);
+    char *buffer = (char *) ctx().alloc(new_len);
     if (!buffer) { error_oom(); return str_empty(); }
 
     memcpy(buffer, left.cstr, left.length);
@@ -2355,7 +2526,7 @@ Str str_concat(Str left, Str right) {
 
 Str str_concat_sep(Str left, Str sep, Str right) {
     size_t new_len = left.length + sep.length + right.length;
-    char *buffer = (char *) ctx().malloc(new_len);
+    char *buffer = (char *) ctx().alloc(new_len);
     if (!buffer) { error_oom(); return str_empty(); }
 
     memcpy(buffer, left.cstr, left.length);
@@ -2389,7 +2560,7 @@ Str str_append(Str one, ...) {
         current = va_arg(args, Str);
     }
 
-    char *buffer = (char *) ctx().malloc(total_len + 1);
+    char *buffer = (char *) ctx().alloc(total_len + 1);
     if (!buffer) { error_oom(); return str_empty(); }
 
     memcpy(buffer, one.cstr, one.length);
@@ -2411,7 +2582,7 @@ Str str_append(Str one, ...) {
 char *cstr_repeat(const char *cstr, size_t count) {
     size_t len = strlen(cstr);
     size_t new_len = len * count;
-    char *buffer = (char *) ctx().malloc(new_len + 1);
+    char *buffer = (char *) ctx().alloc(new_len + 1);
     if (!buffer) { error_oom(); return NULL; }
 
     for (size_t i = 0; i < count; i++) {
@@ -2452,7 +2623,7 @@ char base37_to_char(uint8_t value) {
 Str str_repeat(Str str, size_t count) {
     if(count == 0) return str_empty();
     size_t new_len = str.length * count;
-    char *buffer = (char *) ctx().malloc(new_len);
+    char *buffer = (char *) ctx().alloc(new_len);
     if (!buffer) { error_oom(); return str_empty(); }
 
     for (size_t i = 0; i < count; i++) {
@@ -2466,13 +2637,13 @@ Str str_repeat(Str str, size_t count) {
 Str str_fmt(Str format, ...) {
     va_list args;
     va_start(args, format);
-    Str result = str_vfmt(format, args);
+    Str result = str_vec_fmt(format, args);
     va_end(args);
     return result;
 }
 
 
-Str str_vfmt(Str format, va_list args) {
+Str str_vec_fmt(Str format, va_list args) {
     /// @note why do we need to copy the args?
     /// @note why do we need to call vsnprintf twice?
     /// ... because we need to know the length of the string to allocate the buffer
@@ -2487,7 +2658,7 @@ Str str_vfmt(Str format, va_list args) {
         return str_empty();
     }
 
-    char *buffer = (char *) ctx().malloc(len + 1);
+    char *buffer = (char *) ctx().alloc(len + 1);
     if (!buffer) { error_oom(); return str_empty(); }
 
     vsnprintf(buffer, len + 1, format.cstr, args_copy);
@@ -2570,7 +2741,7 @@ int str_last_index_of_chr(Str str, char chr) {
 
 // Replace all occurrences of a character in Str
 Str str_replace(Str str, char target, char replacement) {
-    char *buffer = (char *) ctx().malloc(str.length + 1);
+    char *buffer = (char *) ctx().alloc(str.length + 1);
     if (!buffer) { error_oom(); return str_empty(); }
 
     size_t new_len = 0;
@@ -2595,7 +2766,7 @@ Str str_trim(Str str) {
 
 // Convert Str to uppercase
 Str str_upper(Str str) {
-    char *buffer = (char *) ctx().malloc(str.length + 1);
+    char *buffer = (char *) ctx().alloc(str.length + 1);
     if (!buffer) { error_oom(); return str_empty(); }
 
     for (size_t i = 0; i < str.length; i++) {
@@ -2608,7 +2779,7 @@ Str str_upper(Str str) {
 
 // Convert Str to lowercase
 Str str_lower(Str str) {
-    char *buffer = (char *) ctx().malloc(str.length + 1);
+    char *buffer = (char *) ctx().alloc(str.length + 1);
     if (!buffer) { error_oom(); return str_empty(); }
 
     for (size_t i = 0; i < str.length; i++) {
@@ -2656,7 +2827,7 @@ int str_cmp_natural(Str left, Str right) {
 
 // Append a character to Str
 Str str_append_chr(Str str, char chr) {
-    char *buffer = (char *) ctx().malloc(str.length + 2);
+    char *buffer = (char *) ctx().alloc(str.length + 2);
     if (!buffer) { error_oom(); return str_empty(); }
     memcpy(buffer, str.cstr, str.length);
     buffer[str.length] = chr;
@@ -2668,7 +2839,7 @@ Str str_append_chr(Str str, char chr) {
 Str str_append_cstr(Str str, const char *cstr) {
     size_t cstr_len = strlen(cstr);
     size_t new_len = str.length + cstr_len;
-    char *buffer = (char *) ctx().malloc(new_len + 1);
+    char *buffer = (char *) ctx().alloc(new_len + 1);
     if (!buffer) { error_oom(); return str_empty(); }
     memcpy(buffer, str.cstr, str.length);
     memcpy(buffer + str.length, cstr, cstr_len);
@@ -2692,7 +2863,7 @@ Str *str_split_chr(Str str, char delimiter, size_t *out_count) {
         if (str.cstr[i] == delimiter) count++;
     }
 
-    Str *result = (Str *) ctx().malloc(sizeof(Str) * count);
+    Str *result = (Str *) ctx().alloc(sizeof(Str) * count);
     if (!result) { error_oom(); *out_count = 0; return NULL; }
 
     size_t start = 0;
@@ -2808,8 +2979,10 @@ int string_test_main(void) {
     return 0;
 }
 
-#pragma endregion 
+#pragma endregion
+//#endregion Preamble_StringImpl
 
+//#region Internal_ArenaImpl
 #pragma region ArenaImpl
 
 #ifdef DEBUG_MEMORY
@@ -3024,206 +3197,44 @@ void arena_test_main() {
 }
 
 
-#pragma endregion 
+#pragma endregion
+//#endregion Preamble_ArenaImpl
 
+//#region Internal_HeapImpl
 #pragma region HeapImpl
 
 // Initialize the heap
-void heap_init(Heap *h, size_t initial_capacity, size_t gc_threshold) {
-    h->free_list = NULL;
-    h->capacity = initial_capacity;
-    h->size = 0;
-    h->gc_threshold = gc_threshold;
-    h->generation_count = 0;
-    h->objects = (HeapObject**)calloc(initial_capacity, sizeof(HeapObject*));
-    // h->objects = (HeapObject**)malloc(sizeof(HeapObject*) * h->capacity);/
-    if (!h->objects) {
-        fprintf(stderr, "Failed to initialize heap objects array.\n");
-        exit(EXIT_FAILURE);
-    }
-    // memset(h->objects, 0, sizeof(HeapObject*) * h->capacity);
-}
-
-void *heap_realloc(Heap *heap, void *ptr, size_t old_size, size_t new_size) {
-    /// @todo 
-
-    return ptr;
-}
-
-// Allocate a new HeapObject
-HeapObject* heap_alloc_object(Heap *heap, HeapObjectType type, size_t size) {
-    HeapObject *obj = NULL;
-
-    // Reuse from free list if available
-    if (heap->free_list) {
-        obj = heap->free_list;
-        heap->free_list = heap->free_list->next;
-    } else {
-        // Expand the objects array if necessary
-        if (heap->size >= heap->capacity) {
-            size_t new_capacity = heap->capacity * 2;
-            HeapObject **new_objects = (HeapObject**)realloc(heap->objects, sizeof(HeapObject*) * new_capacity);
-            if (!new_objects) {
-                fprintf(stderr, "Heap allocation failed: no space to expand objects array.\n");
-                return NULL;
-            }
-            memset(new_objects + heap->capacity, 0, sizeof(HeapObject*) * (new_capacity - heap->capacity));
-            heap->objects = new_objects;
-            heap->capacity = new_capacity;
-        }
-
-        // Allocate new HeapObject
-
-        /// @todo consider calloc here
-        // obj = (HeapObject*)malloc(sizeof(HeapObject));
-        obj = (HeapObject*)calloc(1, sizeof(HeapObject));
-        if (!obj) {
-            fprintf(stderr, "Heap allocation failed: unable to allocate HeapObject.\n");
-            return NULL;
-        }
-        obj->marked = false;
-        obj->next = NULL;
-        heap->objects[heap->size++] = obj;
-    }
-
-    obj->type = type;
-    obj->size = size;
-    obj->data = malloc(size);
-    if (!obj->data) {
-        fprintf(stderr, "Heap allocation failed: unable to allocate object data.\n");
-        // Return obj to free list
-        obj->type = HEAP_DEAD;
-        obj->next = heap->free_list;
-        heap->free_list = obj;
-        return NULL;
-    }
-
-    return obj;
-}
-
-// Allocate memory within the heap
-void* heap_alloc(Heap *heap, size_t size) {
-    HeapObject *obj = heap_alloc_object(heap, HEAP_ALIVE, size);
-    if (!obj) return NULL;
-    return obj->data;
-}
-
-// Free a HeapObject and return it to the free list
-GCError heap_free_object(Heap *heap, HeapObject *obj) {
-    if (!obj) return GC_ERR_INVALID_POINTER;
-
-    // Free the data
-    free(obj->data);
-    obj->data = NULL;
-
-    // Reset metadata
-    obj->type = HEAP_DEAD;
-    obj->marked = false;
-
-    // Add to free list
-    obj->next = heap->free_list;
-    heap->free_list = obj;
-
-    return GC_SUCCESS;
-}
-
-// Free the entire heap
-void heap_free(Heap *heap) {
-    for (size_t i = 0; i < heap->size; i++) {
-        HeapObject *obj = heap->objects[i];
-        if (obj) {
-            free(obj->data);
-            free(obj);
-        }
-    }
-    free(heap->objects);
-}
-
-// Print heap statistics
-void heap_print(const Heap *heap) {
-    size_t alive = 0, dead = 0, pinned = 0;
-    for (size_t i = 0; i < heap->size; i++) {
-        HeapObject *obj = heap->objects[i];
-        if (obj) {
-            switch (obj->type) {
-                case HEAP_ALIVE:
-                    alive++;
-                    break;
-                case HEAP_DEAD:
-                    dead++;
-                    break;
-                case HEAP_PINNED:
-                    pinned++;
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-    printf("Heap Statistics:\n");
-    printf("  Total Capacity: %zu\n", heap->capacity);
-    printf("  Total Objects: %zu\n", heap->size);
-    printf("  Alive Objects: %zu\n", alive);
-    printf("  Dead Objects: %zu\n", dead);
-    printf("  Pinned Objects: %zu\n", pinned);
-}
-
-// Debug dump of the heap
-void heap_debug_dump(const Heap *heap) {
-    printf("Heap Debug Dump:\n");
-    for (size_t i = 0; i < heap->size; i++) {
-        HeapObject *obj = heap->objects[i];
-        if (obj) {
-            printf("  Object %zu: Type=%d, Size=%zu, Data=%p, Marked=%s\n",
-                   i, obj->type, obj->size, obj->data, obj->marked ? "true" : "false");
-        }
-    }
-}
-
-
+// void heap_init(Heap *h, size_t initial_capacity, size_t gc_threshold) {
+//     h->free_list = NULL;
+//     h->capacity = initial_capacity;
+//     h->size = 0;
+//     h->gc_threshold = gc_threshold;
+//     h->generation_count = 0;
+//     h->objects = (HeapObject**)calloc(initial_capacity, sizeof(HeapObject*));
+//     // h->objects = (HeapObject**)malloc(sizeof(HeapObject*) * h->capacity);/
+//     if (!h->objects) {
+//         fprintf(stderr, "Failed to initialize heap objects array.\n");
+//         exit(EXIT_FAILURE);
+//     }
+//     // memset(h->objects, 0, sizeof(HeapObject*) * h->capacity);
+// }
 
 void heap_test_main() {
-    printf("Running Heap Tests...\n");
-    
-    Heap heap;
-    heap_init(&heap, 4, 2); // initial_capacity=4, gc_threshold=2
-    
-    // Allocate objects
-    HeapObject *obj1 = heap_alloc_object(&heap, HEAP_ALIVE, sizeof(int));
-    assert(obj1 != NULL && "Failed to allocate obj1");
-    *(int*)obj1->data = 42;
-    
-    HeapObject *obj2 = heap_alloc_object(&heap, HEAP_ALIVE, sizeof(double));
-    assert(obj2 != NULL && "Failed to allocate obj2");
-    *(double*)obj2->data = 3.14;
-    
-    HeapObject *obj3 = heap_alloc_object(&heap, HEAP_ALIVE, sizeof(char));
-    assert(obj3 != NULL && "Failed to allocate obj3");
-    *(char*)obj3->data = 'A';
-    
-    heap_print(&heap); // Should show 3 alive objects
-    
-    // Free obj2
-    heap_free_object(&heap, obj2);
-    
-    heap_print(&heap); // Should show 2 alive, 1 dead
-    
-    // Allocate another object to reuse the freed obj2
-    HeapObject *obj4 = heap_alloc_object(&heap, HEAP_ALIVE, sizeof(float));
-    assert(obj4 != NULL && "Failed to allocate obj4");
-    *(float*)obj4->data = 1.23f;
-    
-    heap_print(&heap); // Should show 3 alive, 1 dead
-    
-    // Cleanup
-    heap_free(&heap);
-    
-    printf("Heap Tests Completed.\n\n");
+    Heap h = {0};
+    heap_init(&h, 16, 8);
+
+    // Test 1: Initialization
+    log_assert(h.capacity == 16, sMSG("Initial capacity should be 16"));
+    log_assert(h.size == 0, sMSG("Initial size should be 0"));
+    log_assert(h.gc_threshold == 8, sMSG("Initial GC threshold should be 8"));
+    log_assert(h.generation_count == 0, sMSG("Initial generation count should be 0"));
+    log_assert(h.objects != NULL, sMSG("Heap objects array should be initialized"));
 }
 
+#pragma endregion
+//#endregion Preamble_HeapImpl
 
-#pragma endregion 
-
+//#region Internal_TracebackImpl
 #pragma region TracebackImpl
 
 #define tracer_print_last(ts) (tracer_print_stack(ts, 16))
@@ -3302,8 +3313,10 @@ void tracer_test_main() {
 }
 
 
-#pragma endregion 
+#pragma endregion
+//#endregion Preamble_TracebackImpl
 
+//#region Internal_PerformanceImpl
 #pragma region PerformanceImpl
 
 
@@ -3358,8 +3371,10 @@ void perf_time_report() {
     printf("Time elapsed: %ld.%09ld seconds\n", seconds, ns);
 }
 
-#pragma endregion 
+#pragma endregion
+//#endregion Preamble_PerformanceImpl
 
+//#region Internal_CliImpl
 #pragma region CliImpl
 
 
@@ -3402,8 +3417,10 @@ void cli_print_opts(const CliOption options[], int num_options) {
 }
 
 
-#pragma endregion 
+#pragma endregion
+//#endregion 
 
+//#region Internal_TestImpl
 #pragma region TestImpl
 
 
@@ -3483,7 +3500,9 @@ int unittest_test_main() {
 
 
 #pragma endregion
+//#endregion
 
+//#region Preamble_TestMain
 #pragma region TestMain
 
 int internal_test_main(void) {
@@ -3499,13 +3518,17 @@ int internal_test_main(void) {
 }
 
 #pragma endregion
+//#endregion
 
 
 /// @file parsing.c
 
+//#region Parsing_AstImpl
 #pragma region ParsingAstImpl
 #pragma endregion
+//#endregion
 
+//#region Parsing_LexerRules
 #pragma region ParserLexerRules
 
 #define lex_if_wordlike(c)\
@@ -3569,15 +3592,17 @@ int internal_test_main(void) {
 
 
 #pragma endregion
+//#endregion
 
+//#region Parsing_LexerImpl
 #pragma region ParsingLexerImpl
 
 
 void lex_init(ParseContext *pctx, size_t capacity, Str indent) {
-    pctx()->lexer.indent = indent;
-    pctx()->lexer.num_tokens = 0;
-    pctx()->lexer.capacity = capacity;
-    pctx()->lexer.tokens = ctx().malloc(capacity * sizeof(Token));
+    pctx->lexer.indent = indent;
+    pctx->lexer.num_tokens = 0;
+    pctx->lexer.capacity = capacity;
+    pctx->lexer.tokens = ctx().alloc(capacity * sizeof(Token));
 
 }
 
@@ -3703,7 +3728,6 @@ void lex(Lexer *lex, Source *src) {
             else if(lex_tag_rule(fst())) {
                 at_col += 1;
                 while(lex_if_wordlike(fst()) && eol_check()) at_col += 1;
-                // debugger;
                 emit(TT_TAG);
             } 
             else if(lex_type_rule(fst())) {
@@ -3843,6 +3867,109 @@ void lex_print_tokens(Token *tokens, size_t start, size_t end, size_t marker) {
     puts("\n");
 }
 
+
+
+/// @brief Helper function to map TokenType to ANSI color codes
+const char* tt_colof(TokenType tt) {
+    switch(tt) {
+        case TT_KEYWORD:
+            return ANSI_COL_BLUE;
+        case TT_IDENTIFIER:
+            return ANSI_COL_RESET;
+        case TT_STRING:
+            return ANSI_COL_BRIGHT_YELLOW;
+        case TT_INT:
+        case TT_FLOAT:
+        case TT_DOUBLE:
+            return ANSI_COL_BRIGHT_GREEN;
+        case TT_TYPE:
+            return ANSI_COL_CYAN;
+        case TT_OP:
+        case TT_ASSIGN:
+            return ANSI_COL_RED;
+        case TT_TAG:
+            return ANSI_COL_BRIGHT_MAGENTA;
+        case TT_BRA_OPEN:
+        case TT_BRA_CLOSE:
+            return ANSI_COL_BRIGHT_BLUE;
+        case TT_DOC_COMMENT:
+            return ANSI_COL_BRIGHT_BLACK;
+        case TT_END:
+            // Reset color for end tokens (like newlines)
+            return ANSI_COL_RESET;
+        default:
+            // Default color for other tokens
+            return ANSI_COL_WHITE;
+    }
+}
+Str tokens_to_ansi_str(Lexer lexed_tokens) {
+    Str result = str_empty();
+    Str reset_str = str_from_cstr(ANSI_COL_RESET);
+    size_t indent_level = 0;
+    bool after_newline = true;
+        
+    for (size_t i = 0; i < lexed_tokens.num_tokens; i++) {
+        Token tok = lexed_tokens.tokens[i];
+        if(!after_newline && (tok.type != TT_SEP  && tok.type != TT_BRA_OPEN))
+            result = str_concat(result, str_from_cstr(" "));
+
+        switch (tok.type) {
+            case TT_INDENT:
+                indent_level++;
+                break;
+
+            case TT_DEDENT:
+                if (indent_level > 0) {
+                    indent_level--;
+                }
+                if(indent_level == 0) {
+                    result = str_concat(result, str_from_cstr("\n"));
+                }
+                break;
+
+            case TT_END:
+                // Append newline and reset ANSI colors
+                result = str_concat(result, str_from_cstr("\n"));
+                result = str_concat(result, reset_str);
+                after_newline = true;
+                break;
+
+            case TT_ASSIGN:
+                if(str_chr_at(tok.value, 0) == ':') {
+                    result = str_concat(result, str_from_cstr(":=\n"));
+                    after_newline = true;
+                } else {
+                    result = str_concat(result, tok.value);
+                }
+                break;
+            case TT_IGNORE:
+            case TT_DISCARD:
+                // Append these tokens directly without coloring
+                if (!str_is_empty(tok.value)) {
+                    result = str_concat(result, tok.value);
+                }
+                break;
+
+            default:
+                if (after_newline) {
+                    Str indent = str_repeat(lexed_tokens.indent, indent_level);
+                    result = str_concat(result, indent);
+                    after_newline = false;
+                }
+
+                if (!str_is_empty(tok.value)) {
+                    Str colored = str_with_col(tt_colof(tok.type), tok.value);
+                    result = str_concat(result, colored);
+                }
+                break;
+        }
+    }
+
+    return str_concat(result, reset_str);
+}
+
+
+
 void lex_test_main() {
     Str source = s(
         "const test = 1234\n\n"
@@ -3857,13 +3984,15 @@ void lex_test_main() {
 }
 
 #pragma endregion
+//#endregion
 
+//#region Parsing_AstApiImpl
 #pragma region ParsingAstApiImpl
 
 
 // Assume node_new and AstNode are defined elsewhere
 AstNode *node_new(AstType t, size_t line, size_t col) {
-    AstNode *node = ctx().malloc(sizeof(AstNode));
+    AstNode *node = ctx().alloc(sizeof(AstNode));
     if (!node) { error_oom(); return NULL; }
     node->type = t;
     node->line = line;
@@ -3879,7 +4008,7 @@ AstNode *node_new(AstType t, size_t line, size_t col) {
 /// @param token The token associated with the type annotation (for location tracking).
 /// @return A pointer to the newly created AstNode.
 AstNode *ast_type_annotation_new(Token *token) {
-    AstNode *node = ctx().malloc(sizeof(AstNode));
+    AstNode *node = ctx().alloc(sizeof(AstNode));
     node->type = AST_TYPE_ANNOTATION;
     node->line = token->line;
     node->col = token->col;
@@ -3893,7 +4022,7 @@ AstNode *ast_type_annotation_new(Token *token) {
 
 /// @brief Creates a new AST node for a destructuring assignment.
 AstNode *ast_destructure_assign_new(Token *token, AstNode **variables, size_t num_variables, AstNode *expression) {
-    AstNode *node = ctx().malloc(sizeof(AstNode));
+    AstNode *node = ctx().alloc(sizeof(AstNode));
     node->type = AST_DESTRUCTURE_ASSIGN;
     node->line = token->line;
     node->col = token->col;
@@ -3907,14 +4036,14 @@ AstNode *ast_destructure_assign_new(Token *token, AstNode **variables, size_t nu
 /// @brief Creates a new AST node for a generic type.
 AstNode *ast_generic_type_new(Token *token, Str base_type) {
     return NULL;
-    // AstNode *node = ctx().malloc(sizeof(AstNode));
+    // AstNode *node = ctx().alloc(sizeof(AstNode));
     // node->type = AST_GENERIC_TYPE;
     // node->line = token->line;
     // node->col = token->col;
     // node->generic_type.base_type = base_type;
-    // node->generic_type.type_params = ctx().malloc(ARRAY_SIZE_SMALL * sizeof(AstNode *));
+    // node->generic_type.type_params = ctx().alloc(ARRAY_SIZE_SMALL * sizeof(AstNode *));
     // node->generic_type.num_type_params = 0;
-    // node->generic_type.constraints = ctx().malloc(ARRAY_SIZE_SMALL * sizeof(struct TypeConstraint));
+    // node->generic_type.constraints = ctx().alloc(ARRAY_SIZE_SMALL * sizeof(struct TypeConstraint));
     // node->generic_type.num_constraints = 0;
     // node->generic_type.type_params_capacity = ARRAY_SIZE_SMALL;
     // return node;
@@ -4031,25 +4160,16 @@ static inline AstNode *ast_fn_def_new(Token *head,
     return node;
 }
 
+/// @todo unused -- handled by ast_fn_def_new
 // Anonymous Function 
-static inline AstNode *ast_fn_anon_def_new(Token *head,
-     struct AnonFnParam *params, size_t num_params, AstNode *body) {
-    AstNode *node = node_new(AST_FN_DEF_ANON, head->line, head->col);
-    node->fn_anon.params = params;
-    node->fn_anon.num_params = num_params;
-    node->fn_anon.body = body;
-    return node;
-}
-
-// Struct 
-static inline AstNode *ast_struct_def_new(Token *head,
-     Str name, struct StructField *fields, size_t num_fields) {
-    AstNode *node = node_new(AST_STRUCT_DEF, head->line, head->col);
-    node->struct_def.name = name;
-    node->struct_def.fields = fields;
-    node->struct_def.num_fields = num_fields;
-    return node;
-}
+// static inline AstNode *ast_fn_anon_def_new(Token *head,
+//      struct AnonFnParam *params, size_t num_params, AstNode *body) {
+//     AstNode *node = node_new(AST_FN_DEF_ANON, head->line, head->col);
+//     node->fn_anon.params = params;
+//     node->fn_anon.num_params = num_params;
+//     node->fn_anon.body = body;
+//     return node;
+// }
 
 // Struct Literal
 static inline AstNode *ast_object_literal_new(Token *head,
@@ -4058,16 +4178,6 @@ static inline AstNode *ast_object_literal_new(Token *head,
     node->object_literal.struct_name = struct_name;
     node->object_literal.fields = fields;
     node->object_literal.num_fields = num_fields;
-    return node;
-}
-
-// Trait 
-static inline AstNode *ast_trait_def_new(Token *head,
-     Str name, struct TraitMethod *methods, size_t num_methods) {
-    AstNode *node = node_new(AST_TRAIT, head->line, head->col);
-    node->trait.name = name;
-    node->trait.methods = methods;
-    node->trait.num_methods = num_methods;
     return node;
 }
 
@@ -4085,7 +4195,7 @@ static inline AstNode *ast_if_new(Token *head,
 /// @todo 
 AstNode *ast_doc_comment_new(Token *token, Str comment) {
     return NULL;
-    // AstNode *node = ctx().malloc(sizeof(AstNode));
+    // AstNode *node = ctx().alloc(sizeof(AstNode));
     // node->type = AST_DOC_COMMENT;
     // node->line = token->line;
     // node->col = token->col;
@@ -4222,28 +4332,28 @@ static inline AstNode *ast_ignore_new(Token *head) {
     return node;
 }
 
-// Expression 
-static inline AstNode *ast_expression_new(Token *head,
-     AstNode *expression) {
-    AstNode *node = node_new(AST_EXPRESSION, head->line, head->col);
-    node->exp_stmt.expression = expression;
-    return node;
-}
 
+/// @todo -- unused?
+// Expression 
+// static inline AstNode *ast_expression_new(Token *head,
+//      AstNode *expression) {
+//     AstNode *node = node_new(AST_EXPRESSION, head->line, head->col);
+//     node->exp_stmt.expression = expression;
+//     return node;
+// }
+
+
+/// @todo -- to implement
 // Module 
-static inline AstNode *ast_module_new(Token *head,
-     Str name) {
-    AstNode *node = node_new(AST_MODULE, head->line, head->col);
-    node->mod_stmt.name = name;
-    return node;
-}
+// static inline AstNode *ast_module_new(Token *head, Str name) {
+// }
 
 
 
 
 /// @todo
 static inline AstNode *ast_struct_new(Token *head, Str name, struct StructField *fields, size_t num_fields) {
-    AstNode *node = ctx().malloc(sizeof(AstNode));
+    AstNode *node = ctx().alloc(sizeof(AstNode));
     node->type = AST_STRUCT_DEF;
     node->line = head->line;
     node->col = head->col;
@@ -4254,7 +4364,7 @@ static inline AstNode *ast_struct_new(Token *head, Str name, struct StructField 
 }
 
 static inline AstNode *ast_trait_new(Token *head, Str name, struct TraitMethod *methods, size_t num_methods) {
-    AstNode *node = ctx().malloc(sizeof(AstNode));
+    AstNode *node = ctx().alloc(sizeof(AstNode));
     node->type = AST_TRAIT;
     node->line = head->line;
     node->col = head->col;
@@ -4264,22 +4374,18 @@ static inline AstNode *ast_trait_new(Token *head, Str name, struct TraitMethod *
     return node;
 }
 
-static inline AstNode *ast_set_new(AstNode *pattern, AstNode *expression) {
-    return NULL;
-    // AstNode *node = ctx().malloc(sizeof(AstNode));
-    // node->type = AST_SET;
-    // node->set.pattern = pattern;
-    // node->set.expression = expression;
-    // return node;
-}
-
-static inline struct MatchCase *ast_match_arm_new(Token *head, AstNode *pattern, AstNode *expression) {
-    return NULL;
-}
 
 
-#pragma endregion 
+/// @todo -- unused
+// static inline struct MatchCase *ast_match_arm_new(Token *head, AstNode *pattern, AstNode *expression) {
+//     return NULL;
+// }
 
+
+#pragma endregion
+//#endregion 
+
+//#region Parsing_AstStrImpl
 #pragma region ParsingAstStrImpl
 
 Str ast_to_json(AstNode *node, size_t indent);
@@ -5343,7 +5449,9 @@ Str ast_mutation_to_json(AstNode *node, size_t indent) {
 }
 
 #pragma endregion
+//#endregion
 
+//#region Parsing_Impl
 #pragma region ParsingParserImpl
 
 #define tokens_remain() (p->parser.current_token < p->lexer.num_tokens) 
@@ -5386,7 +5494,7 @@ static inline Token *parse_consume(ParseContext *p, TokenType type, Str value, S
 
 void parse(ParseContext *p) {
     size_t count = 0;
-    AstNode **statements = ctx().malloc(ARRAY_SIZE_MEDIUM * sizeof(AstNode *));
+    AstNode **statements = ctx().alloc(ARRAY_SIZE_MEDIUM * sizeof(AstNode *));
     AstNode *result = NULL;
 
     while(tokens_remain() && depth_is_bounded()) {
@@ -5633,7 +5741,7 @@ AstNode *parse_block(ParseContext *p) {
     consume_specific(TT_INDENT, s("INDENT"), sMSG("Expected an indentation to start the block."));
 
     size_t count = 0;
-    AstNode **statements = ctx().malloc(ARRAY_SIZE_MEDIUM * sizeof(AstNode *));
+    AstNode **statements = ctx().alloc(ARRAY_SIZE_MEDIUM * sizeof(AstNode *));
     AstNode *result = NULL;
 
     while(tokens_remain() && !peek_is(TT_DEDENT)) {
@@ -5860,7 +5968,7 @@ AstNode *parse_function(ParseContext *p,bool is_loop) {
     Str name = consume(TT_IDENTIFIER, sMSG("Expected function name"))->value;
 
     consume_specific(TT_BRA_OPEN, s("("), sMSG("Expected an opening parenthesis."));
-    struct FnParam *params = ctx().malloc(sizeof(struct FnParam *) * ARRAY_SIZE_SMALL);
+    struct FnParam *params = ctx().alloc(sizeof(struct FnParam *) * ARRAY_SIZE_SMALL);
     size_t count = 0;
     while(tokens_remain()) {
         if(peek_eq_chr(')')) break;
@@ -5993,7 +6101,7 @@ AstNode *parse_post_anon(ParseContext *p) {
     // Parse parameters
     consume_specific(TT_BRA_OPEN, s("("), sMSG("Expected '(' after 'fn' for anonymous function parameters."));
     
-    struct FnParam *params = ctx().malloc(sizeof(struct FnParam) * ARRAY_SIZE_SMALL);
+    struct FnParam *params = ctx().alloc(sizeof(struct FnParam) * ARRAY_SIZE_SMALL);
     size_t count = 0;
 
     while(tokens_remain() && !peek_eq_chr(')')) {
@@ -6037,7 +6145,7 @@ AstNode *parse_destructure_assignment(ParseContext *p) {
     consume_specific(TT_BRA_OPEN, s("["), sMSG("Expected '(' to start variable list in destructuring assignment."));
 
     // Parse variables
-    AstNode **variables = ctx().malloc(ARRAY_SIZE_SMALL * sizeof(AstNode *));
+    AstNode **variables = ctx().alloc(ARRAY_SIZE_SMALL * sizeof(AstNode *));
     size_t num_variables = 0;
 
     while (tokens_remain() && !peek_eq_chr(']')) {
@@ -6100,7 +6208,7 @@ AstNode **parse_bindings(ParseContext *p, size_t *out_num_bindings) {
         consume(TT_INDENT, sMSG("Bindings blocks should be indented or bracketed."));
     }
 
-    AstNode **bindings = ctx().malloc(ARRAY_SIZE_SMALL* sizeof(AstNode *));
+    AstNode **bindings = ctx().alloc(ARRAY_SIZE_SMALL* sizeof(AstNode *));
     *out_num_bindings = 0;
     while(tokens_remain()) {
         if(peek_eq_chr(')') || peek_is(TT_DEDENT)) break;
@@ -6159,8 +6267,8 @@ AstNode *parse_set_or_dict(ParseContext *p) {
     consume_specific(TT_BRA_OPEN, s("{"), sMSG("Expected `{` to start set or dictionary."));
 
     // Prepare containers for keys and values
-    AstNode **keys = ctx().malloc(sizeof(AstNode *) * ARRAY_SIZE_SMALL);
-    AstNode **values = ctx().malloc(sizeof(AstNode *) * ARRAY_SIZE_SMALL);
+    AstNode **keys = ctx().alloc(sizeof(AstNode *) * ARRAY_SIZE_SMALL);
+    AstNode **values = ctx().alloc(sizeof(AstNode *) * ARRAY_SIZE_SMALL);
     size_t count_keys = 0, count_values = 0;
 
     // Parse elements
@@ -6198,7 +6306,7 @@ AstNode *parse_set_or_dict(ParseContext *p) {
     if (is_dict) {
 
         /// @todo 
-        struct AstDictEntry *kv_pairs =  ctx().malloc(sizeof(*kv_pairs) * count_keys);
+        struct AstDictEntry *kv_pairs =  ctx().alloc(sizeof(*kv_pairs) * count_keys);
         for(size_t i = 0; i < count_keys; i++) {
             kv_pairs[i].key = keys[i];
             kv_pairs[i].value = values[i];
@@ -6256,7 +6364,7 @@ AstNode *parse_type_annotation(ParseContext *p) {
 
         // Initialize type parameters array
         size_t params_capacity = ARRAY_SIZE_SMALL;
-        type_ann->type_annotation.type_params = ctx().malloc(params_capacity * sizeof(AstNode *));
+        type_ann->type_annotation.type_params = ctx().alloc(params_capacity * sizeof(AstNode *));
         type_ann->type_annotation.num_type_params = 0;
 
         while (tokens_remain() && !peek_eq_chr(')')) {
@@ -6382,7 +6490,7 @@ AstNode *parse_vec(ParseContext *p) {
     consume_specific(TT_BRA_OPEN, s("["), sMSG("Expected a `[` bracket for vectors."));
 
     size_t count = 0;
-    AstNode **items = ctx().malloc(ARRAY_SIZE_SMALL* sizeof(AstNode *));
+    AstNode **items = ctx().alloc(ARRAY_SIZE_SMALL* sizeof(AstNode *));
 
     while(tokens_remain() && !peek_eq_chr(']')) {
         AstNode *item = parse_expression(p, 0);
@@ -6423,7 +6531,7 @@ AstNode *parse_dict(ParseContext *p) {
     struct AstDictEntry *items = 
         /// @todo: why is this broken, should we move all the subfields of AstNode out?
         ///.... or perhaps move the property parsing into ast_* ?
-        ctx().malloc(ARRAY_SIZE_SMALL* sizeof(struct AstDictEntry));
+        ctx().alloc(ARRAY_SIZE_SMALL* sizeof(struct AstDictEntry));
 
     while(tokens_remain() && !peek_eq_chr('}')) {
         /// @todo: this expects dict keys to be ...?
@@ -6483,7 +6591,7 @@ AstNode *parse_post_call(ParseContext *p, AstNode *callee) {
 
     consume_specific(TT_BRA_OPEN, s("("), sMSG("Expected `(` for function call."));
 
-    AstNode **args = ctx().malloc(ARRAY_SIZE_SMALL * sizeof(AstNode *));
+    AstNode **args = ctx().alloc(ARRAY_SIZE_SMALL * sizeof(AstNode *));
     size_t count = 0;
 
     while (tokens_remain() && !peek_eq_chr(')')) {
@@ -6524,7 +6632,7 @@ AstNode *parse_object_literal(ParseContext *p) {
     consume_specific(TT_BRA_OPEN, s("{"), sMSG("Expected '{' to start struct literal."));
 
     size_t count = 0;
-    struct AstObjectField *fields = ctx().malloc(ARRAY_SIZE_SMALL * sizeof(struct AstObjectField));
+    struct AstObjectField *fields = ctx().alloc(ARRAY_SIZE_SMALL * sizeof(struct AstObjectField));
 
     while(tokens_remain() && !peek_eq_chr('}')) {
         /// @todo consider whether we want fields to start with `.`, may need to modify lexer
@@ -6568,7 +6676,7 @@ AstNode *parse_match(ParseContext *p) {
     consume_expected(TT_INDENT);
 
     // Expecting the start of match arms
-    struct MatchCase *arms = ctx().malloc(ARRAY_SIZE_SMALL * sizeof(struct MatchCase));
+    struct MatchCase *arms = ctx().alloc(ARRAY_SIZE_SMALL * sizeof(struct MatchCase));
     size_t arm_count = 0;
 
     while(tokens_remain() && !peek_is(TT_DEDENT)) {
@@ -6716,7 +6824,7 @@ AstNode *parse_struct(ParseContext *p) {
     // parse_not_implemented();
     // return NULL;
 
-    struct StructField *fields = ctx().malloc(ARRAY_SIZE_SMALL * sizeof(struct StructField));
+    struct StructField *fields = ctx().alloc(ARRAY_SIZE_SMALL * sizeof(struct StructField));
     size_t num_fields = 0;
 
     while(tokens_remain() && !peek_is(TT_DEDENT)) {
@@ -6865,17 +6973,21 @@ void parse_test_main() {
 // }
 
 #pragma endregion
+//#endregion
 
+//#region Parsing_TestMain
 #pragma region TestMain
 void parsing_test_main() {
     lex_test_main();
     parse_test_main();
 }
 #pragma endregion
+//#endregion
 
 
 /// @file native.c
 
+//#region Native_NativeErrorImpl
 #pragma region NativeErrorImpl
 
 #ifdef DEBUG_REQUIRE_ASSERTS
@@ -6917,7 +7029,9 @@ void parsing_test_main() {
     if (test) return box_pack_error(native_error(__VA_ARGS__));\
 
 #pragma endregion
+//#endregion
 
+//#region Native_BoxGenericImpl
 #pragma region BoxGenericImpl
 
 #define box_return_noimpl()\
@@ -6949,11 +7063,11 @@ Str box_to_str(Box b) {
         case BT_TAG:
             return str_fmt(s("Tag(%.*s)"), fmt(box_unpack_tag(b)));
         case BT_FLOAT:
-        case BT_BOX_DOUBLE: /// @todo impl doubles
+        case BT_DYN_DOUBLE: /// @todo impl doubles
             return str_fmt(s("%.6f"), box_unpack_float(b));
         // case BT_BOX_PTR:
             // return str_fmt(s("BoxPtr(%p)"), box_unpack_box_ptr(b));
-        case BT_ERROR:
+        case BT_BOX_ERROR:
             return str_fmt(s("Error(%.*s)"), fmt(box_unpack_error(b)->message));
         case BT_STATUS:
             return str_fmt(s("Status(%.*s)"), fmt(st_nameof(box_unpack_int(b))));
@@ -6967,14 +7081,14 @@ Str box_to_str(Box b) {
             return BoxArray_to_repr(box_unpack_array(b));
         case BT_BOX_DICT:
             return BoxDict_to_repr(box_unpack_dict(b));
-        case BT_DYN_ARRAY :
-        case BT_DYN_DICT :
-        case BT_BOX_OBJECT :
-            return BoxObject_to_repr(box_unpack_object(b));
+        case BT_DYN_COLLECTION:
+            return DynCollection_to_repr(box_unpack_DynCollection(b));
+        case BT_DYN_OBJECT :
+            return DynObject_to_repr(box_unpack_object(b));
         case BT_BOX_STRUCT:
             return sMSG("struct-todo");
         default:
-            return s("unknown");
+            return str_fmt(s("Box?(%d)"), b.type);
     }
 }
 
@@ -6986,7 +7100,7 @@ bool box_try_numeric(Box box, double *out_value) {
         case BT_FLOAT:
             *out_value = (double)box_unpack_float(box);
             return true;
-        case BT_BOX_DOUBLE:
+        case BT_DYN_DOUBLE:
             *out_value = (double)box_unpack_double(box);
             return true;
         default:
@@ -7021,7 +7135,7 @@ size_t box_hash(Box box) {
 
     /// @note doubles are the only numeric types which are allocated
     ///     ... so we deref to find their value
-    if(box.type == BT_BOX_DOUBLE) {
+    if(box.type == BT_DYN_DOUBLE) {
         key = *(double *)box.payload;
     } else {
         /// everything else can be hashed on their pointers
@@ -7068,13 +7182,15 @@ Str box_unpack_str(Box box) {
             return box_unpack_bool(box) ? s("true") : s("false");
         case BT_FLOAT:
             return str_fmt(s("%.6f"), box_unpack_float(box));
-        case BT_DYN_ARRAY: case BT_BOX_ARRAY:
+        case BT_BOX_ARRAY:
             return s("box(array-todo)");
-        case BT_DYN_DICT: case BT_BOX_DICT:
+        case BT_BOX_DICT:
             return s("box(dict-todo)");
+        case BT_DYN_COLLECTION:
+            return s("box(collection-todo)");
         case BT_BOX_FN:
             return s("box(fn-todo)");
-        case BT_BOX_OBJECT:
+        case BT_DYN_OBJECT:
             return s("box(object-todo)");
         case BT_BOX_STRUCT:
             return s("box(struct-todo)");
@@ -7109,8 +7225,10 @@ void box_test_main() {
     test_box_unbox_float();
 }
 
-#pragma endregion 
+#pragma endregion
+//#endregion 
 
+//#region Native_BoxApiImpl
 #pragma region BoxApiImpl
 
 /// @brief
@@ -7133,7 +7251,7 @@ void BoxArray_new_elements(BoxArray *array, size_t num_elements) {
         return;
     }
     
-    array->elements = ctx().malloc(num_elements * sizeof(Box));
+    array->elements = ctx().alloc(num_elements * sizeof(Box));
     memset(array->elements, 0, num_elements * sizeof(Box));
     if(array->elements == NULL) {error_oom(); }
 }
@@ -7199,7 +7317,7 @@ void BoxArray_debug_print(BoxArray *array) {
 }
 
 BoxArray *BoxArray_new(size_t fixed_capacity) {
-    BoxArray *array = ctx().malloc(sizeof(BoxArray));
+    BoxArray *array = ctx().alloc(sizeof(BoxArray));
     if(array == NULL) {error_oom(); }
     array->capacity = fixed_capacity;
     array->size = 0;
@@ -7229,64 +7347,6 @@ Box BoxArray_weak_unset(BoxArray *array, size_t index) {
 
 
 
-void DynDict_new_entries(DynDict *dict, size_t num_entries) {
-    if(num_entries == 0) {
-        dict->size = 0;
-        dict->entries = NULL;
-        return;
-    }
-
-    dict->size = num_entries;
-    dict->entries = ctx().malloc(num_entries * sizeof(DynDictEntry));
-    
-    if(dict->entries == NULL) {
-        error_oom();
-    }
-}
-
-DynDict *DynDict_new(size_t initial_capacity) {
-    DynDict *dict = ctx().malloc(sizeof(DynDict));
-    if(dict == NULL) {
-        error_oom();
-    }
-    DynDict_new_entries(dict, initial_capacity);
-    return dict;
-}
-
-
-bool DynDict_find(DynDict *dict, Box key, DynDictEntry *out) {
-    size_t hash = box_hash(key);
-    for(size_t i = 0; i < dict->size; i++) {
-        if(dict->entries[i].hash == hash && box_eq(dict->entries[i].key, key)) {
-            *out = dict->entries[i];
-            return true;
-        }
-    }
-    return false;
-}
-
-void DynDict_free(DynDict *dict) {
-    return;
-    /// @todo free all the strings in the dict
-
-    ctx().free(dict->entries);
-    ctx().free(dict);
-}
-void DynDict_set(DynDict *dict, Box key, Box val) {
-    /// @note same as BoxDict
-    dict->entries[dict->size].value = val;
-    dict->entries[dict->size].key = key;
-    dict->entries[dict->size].hash = box_hash(key);
-    dict->size++;
-}
-
-Box DynDict_get(DynDict *dict, Box key) { 
-    /// @note forward to find 
-    DynDictEntry entry;
-    native_return_error_if(!DynDict_find(dict, key, &entry), s("DynDict.get(): Key not found."));
-    return entry.value;
-}
-
 
 /// @brief 
 /// @example
@@ -7300,76 +7360,136 @@ Box DynDict_get(DynDict *dict, Box key) {
 ///     const queue1 = Queue {1, 2, 3}
 /// @param initial_capacity 
 /// @return 
-DynArray *DynArray_new(size_t initial_capacity) {
-    DynArray *array = heap_alloc(ctx().heap, sizeof(DynArray));
-    require_not_null(array);
 
-    array->elements = heap_alloc(ctx().heap, initial_capacity * sizeof(Box));
-    array->size = 0;
-    array->capacity = initial_capacity;
-    array->heap_obj = heap_alloc_object(ctx().heap, HEAP_ALIVE, sizeof(DynArray));
+DynArray *DynArray_new(size_t initial_capacity) {
+    DynArray *array = ctx().dynalloc(sizeof(DynArray), BT_DYN_COLLECTION);
+    if(array == NULL) { error_oom(); return NULL; }
+
+    array->info.type = DYN_CT_ARRAY;
+    array->info.capacity = initial_capacity;
+    array->info.size = 0;
+    array->elements = ctx().calloc(initial_capacity, sizeof(Box));
+    if(array->elements == NULL) { error_oom(); return NULL;}
     return array;
 }
 
-Box DynArray_add(DynArray *array, Box element) {
-    if(array->size >= array->capacity) {
-        size_t new_cap = next_capacity(array->capacity);
-        Box *new_elements = heap_realloc(ctx().heap, array->elements, 
-            array->capacity * sizeof(Box), new_cap * sizeof(Box)
-        );
-
-        if(!new_elements) {
-            error_oom();
-            return box_halt();
-        }
+/// @brief Append an element to the end of the array.
+/// @note Use reallocation and HeapArray_next_capacity 
+///     ... to resize the array
+Box DynArray_append(DynArray *array, Box element) {
+    require_not_null(array);
+    require_positive(array->info.capacity);
+    if(array->info.size >= array->info.capacity) {
+        size_t new_capacity = HeapArray_next_capacity(array->info.capacity);
+        Box *new_elements = ctx().realloc(array->elements, new_capacity * sizeof(Box));
+        if(new_elements == NULL) { error_oom(); return box_error_empty(); }
         array->elements = new_elements;
-        array->capacity = new_cap;
+        array->info.capacity = new_capacity;
     }
 
-    array->elements[array->size++] = element;
+    array->elements[array->info.size++] = element;
     return element;
 }
 
 Box DynArray_get(const DynArray *array, size_t index) {
-    native_return_error_if(index >= array->size, s("Array.get(index): Index out of bounds (%d)"), index);
+    require_not_null(array);
+    native_return_error_if(index >= array->info.size, s("DynArray.get(): Index out of bounds."));
     return array->elements[index];
 }
 
-Box DynArray_overwrite(DynArray *array, size_t index, Box element) {
-    native_return_error_if(index >= array->size, s("Array.overwrite(index): Index out of bounds (%d)"), index);
-    array->elements[index] = element;
-    return element;
+Box DynArray_overwrite(DynArray *array, size_t index, Box element);
+Box DynArray_weak_remove(DynArray *array, size_t index) ;
+
+void DynArray_free(DynArray *array) ;
+
+void DynArray_debug_print(const DynArray *array);
+
+
+DynDict *DynDict_new(size_t initial_capacity) {
+    DynDict *dict = ctx().dynalloc(sizeof(DynDict), BT_DYN_COLLECTION);
+    if(dict == NULL) { error_oom(); return NULL; }
+
+    dict->info.type = DYN_CT_DICT;
+    dict->info.capacity = initial_capacity;
+    dict->info.size = 0;
+    dict->entries = ctx().calloc(initial_capacity, sizeof(DynDictEntry));
+    if(dict->entries == NULL) { error_oom(); return NULL; }
+    return dict;
 }
 
 
 
-Box DynArray_weak_remove(DynArray *array, size_t index) {
-    native_return_error_if(index >= array->size, s("Array.weak_remove(index): Index out of bounds (%d)"), index);
-    box_return_noimpl();
+bool DynDict_find(DynDict *dict, Box key, DynDictEntry *out);
 
-    /// @todo: strong_remove
-    // memmove(&array->elements[index], &array->elements[index + 1], (array->size - index - 1) * sizeof(Box));
-    // array->elements[index].type = BT_NULL;
-    // array->size--;
-}
+void DynDict_free(DynDict *dict);
 
-void DynArray_free(DynArray *array) {
-    require_not_null(array);
-    heap_free_object(ctx().heap, array->heap_obj);
-}
+/// @brief  Set a key-value pair in the dictionary.
+/// @note   If the key already exists, the value will be updated.
+/// @note       uses probing and open addressing to handle collisions
+/// @note   struct DynDictEntry { size_t hash; Box key; Box value; bool occupied; }
+/// @param DynDict *dict 
+/// @param Box key 
+/// @param Box val 
+/// @return Box 
+Box DynDict_set(DynDict *dict, Box key, Box val) {
+    require_not_null(dict);
 
+    size_t hash = box_hash(key);
+    size_t index = hash % dict->info.capacity;
+    size_t start = index;
 
-void DynArray_debug_print(const DynArray *array) {
-    printf("DynArray (size: %zu, capacity: %zu): [", array->size, array->capacity);
-    for (size_t i = 0; i < array->size; i++) {
-        str_println(box_unpack_str(array->elements[i]));
-        if (i < array->size - 1) printf(", ");
+    while(dict->entries[index].occupied) {
+        if(box_eq(dict->entries[index].key, key)) {
+            dict->entries[index].value = val;
+            return val;
+        }
+        index = (index + 1) % dict->info.capacity;
+
+        /// @note reallocate
+        if(index == start) {
+            size_t new_capacity = HeapArray_next_capacity(dict->info.capacity);
+            DynDictEntry *new_entries = ctx().realloc(dict->entries, new_capacity * sizeof(DynDictEntry));
+            if(new_entries == NULL) { error_oom(); return box_error_empty(); }
+            dict->entries = new_entries;
+            dict->info.capacity = new_capacity;
+            index = hash % dict->info.capacity;
+        }
     }
-    printf("]\n");
+
+    dict->entries[index].hash = hash;
+    dict->entries[index].key = key;
+    dict->entries[index].value = val;
+    dict->entries[index].occupied = true;
+    dict->info.size++;
+    return val;
 }
 
+bool DynDict_find(DynDict *dict, Box key, DynDictEntry *out) {
+    require_not_null(dict);
 
-Str BoxObject_to_repr(BoxObject *obj) {
+    size_t hash = box_hash(key);
+    size_t index = hash % dict->info.capacity;
+    size_t start = index;
+
+    while(dict->entries[index].occupied) {
+        if(box_eq(dict->entries[index].key, key)) {
+            *out = dict->entries[index];
+            return true;
+        }
+        index = (index + 1) % dict->info.capacity;
+        if(index == start) {
+            return false;
+        }
+    }
+
+    return false;
+}
+
+Box DynDict_get(DynDict *dict, Box key);
+
+
+
+Str DynObject_to_repr(DynObject *obj) {
     Str template_name = obj->def->name;
     // Str doc_string = obj->def->doc_string;
     Str fields = BoxDict_to_repr(&obj->namespace.locals);
@@ -7377,11 +7497,135 @@ Str BoxObject_to_repr(BoxObject *obj) {
     return repr;
 }
 
-/// @brief Retrieves an attribute from a BoxObject without specifying the type.
-/// @param obj The BoxObject from which to retrieve the attribute.
+Str DynArray_to_repr(DynArray *array) {
+    Str repr = s("[");
+    for(size_t i = 0; i < dyn_size(array); i++) {
+        repr = str_concat_sep(repr, box_to_str(array->elements[i]), s(", "));
+    }
+    repr = str_concat(repr, s("]"));
+    return repr;
+}
+
+Str DynDict_to_repr(DynDict *dict) {
+    Str repr = s("{");
+    for(size_t i = 0; i < dyn_size(dict); i++) {
+        repr = str_concat_sep(repr, box_to_str(dict->entries[i].key), s(": "));
+        repr = str_concat_sep(repr, box_to_str(dict->entries[i].value), s(", "));
+    }
+    repr = str_concat(repr, s("}"));
+    return repr;
+}
+
+Str DynSet_to_repr(DynSet *set) {
+    Str repr = s("{");
+    for(size_t i = 0; i <  dyn_size(set); i++) {
+        repr = str_concat_sep(repr, box_to_str(set->elements[i]), s(", "));
+    }
+    repr = str_concat(repr, s("}"));
+    return repr;
+}
+
+// Str DynQueue_to_repr(DynQueue *queue) {
+//     Str repr = s("Queue {");
+//     for(size_t i = 0; i < queue->size; i++) {
+//         repr = str_concat_sep(repr, box_to_str(queue->elements[i]), s(", "));
+//     }
+//     repr = str_concat(repr, s("}");
+//     return repr;
+// }
+
+// Str DynStack_to_repr(DynStack *stack) {
+//     Str repr = s("Stack {");
+//     for(size_t i = 0; i < stack->size; i++) {
+//         repr = str_concat_sep(repr, box_to_str(stack->elements[i]), s(", "));
+//     }
+//     repr = str_concat(repr, s("}");
+//     return repr;
+// }
+
+Str DynVecDouble_to_repr(DynVecDouble *vec) {
+    Str repr = s("VecDouble {");
+    for(size_t i = 0; i < dyn_size(vec); i++) {
+        double value = vec->elements[i];
+        repr = str_concat_sep(repr, str_fmt(s("%.6f"), value), s(", "));
+    }
+    repr = str_concat(repr, s("}"));
+    return repr;
+}
+
+Str DynVecBool_to_repr(DynVecBool *vec) {
+    Str repr = s("VecBool {");
+    for(size_t i = 0; i < dyn_size(vec); i++) {
+        bool value = vec->elements[i];
+        repr = str_concat_sep(repr, value ? s("true") : s("false"), s(", "));
+    }
+    repr = str_concat(repr, s("}"));
+    return repr;
+}
+
+Str DynVecInt_to_repr(DynVecInt *vec) {
+    Str repr = s("VecInt {");
+    for(size_t i = 0; i < dyn_size(vec); i++) {
+        int value = vec->elements[i];
+        repr = str_concat_sep(repr, str_fmt(s("%d"), value), s(", "));
+    }
+    repr = str_concat(repr, s("}"));
+    return repr;
+}
+
+Str DynVecChar_to_repr(DynVecChar *vec) {
+    Str repr = s("VecChar {");
+    for(size_t i = 0; i < dyn_size(vec); i++) {
+        char cstr = vec->elements[i];
+        repr = str_concat_sep(repr, str_fmt(s("'%c'"), cstr), s(", "));
+    }
+    repr = str_concat(repr, s("}"));
+    return repr;
+}
+
+Str DynVecString_to_repr(DynVecString *vec) {
+    Str repr = s("VecString {");
+    for(size_t i = 0; i < dyn_size(vec); i++) {
+        Str value = vec->elements[i];
+        repr = str_concat_sep(repr, value, s(", "));
+    }
+    repr = str_concat(repr, s("}"));
+    return repr;
+}
+
+
+Str DynCollection_to_repr(DynCollection *col) {
+    switch(dyn_type(col)) {
+        case DYN_CT_ARRAY:
+            return DynArray_to_repr((DynArray *) col);
+        case DYN_CT_DICT:
+            return DynDict_to_repr((DynDict *) col);
+        case DYN_CT_SET:
+            return DynSet_to_repr((DynSet *) col);
+        case DYN_CT_QUEUE:
+            return s("dyn(queue-todo)");
+        case DYN_CT_STACK:
+            return s("dyn(stack-todo)");
+        case DYN_CT_VEC_DOUBLE:
+            return DynVecDouble_to_repr((DynVecDouble *) col);
+        case DYN_CT_VEC_BOOL:
+            return DynVecBool_to_repr((DynVecBool *) col);
+        case DYN_CT_VEC_INT:
+            return DynVecInt_to_repr((DynVecInt *) col);
+        case DYN_CT_VEC_CHAR:
+            return DynVecChar_to_repr((DynVecChar *) col);
+        case DYN_CT_VEC_STRING:
+            return DynVecString_to_repr((DynVecString *) col);
+        default:
+            return s("dyncol(unknown)");
+    }
+}
+
+/// @brief Retrieves an attribute from a DynObject without specifying the type.
+/// @param obj The DynObject from which to retrieve the attribute.
 /// @param name The name of the attribute.
 /// @return The Box representing the attribute's value, or box_error() if not found.
-Box BoxObject_get_attribute(BoxObject *obj, Str name) {
+Box DynObject_get_attribute(DynObject *obj, Str name) {
     require_not_null(obj);
 
     // Lookup the attribute in the object's namespace
@@ -7392,12 +7636,12 @@ Box BoxObject_get_attribute(BoxObject *obj, Str name) {
     return value;
 }
 
-/// @brief Retrieves an attribute from a BoxObject with  type checking.
-/// @param obj The BoxObject from which to retrieve the attribute.
+/// @brief Retrieves an attribute from a DynObject with  type checking.
+/// @param obj The DynObject from which to retrieve the attribute.
 /// @param name The name of the attribute.
 /// @param expected_type The expected BoxType of the attribute. Use BT_INVALID if no type checking is needed.
 /// @return The Box representing the attribute's value, or box_error() if not found or type mismatch.
-Box BoxObject_get_attribute_checked(BoxObject *obj, Str name, BoxType expected_type) {
+Box DynObject_get_attribute_checked(DynObject *obj, Str name, BoxType expected_type) {
     require_not_null(obj);
 
     Box value = BoxDict_get(&obj->namespace.locals, name);
@@ -7418,11 +7662,11 @@ Box BoxObject_get_attribute_checked(BoxObject *obj, Str name, BoxType expected_t
 /// @param scope 
 /// @param name 
 /// @return 
-Box BoxObject_resolve_method(Box obj, BoxScope *scope, Str name) {
+Box DynObject_resolve_method(Box obj, BoxScope *scope, Str name) {
     require_not_null(scope);
 
     Box fn; 
-    if(obj.type == BT_BOX_OBJECT)  {
+    if(obj.type == BT_DYN_OBJECT)  {
         /// @note we first look for a method in the object's namespace
         if(BoxScope_lookup(&box_unpack_object(obj)->namespace, name, &fn)) {
             native_return_error_if(fn.type != BT_BOX_FN, s("Attribute `%.*s` is not a function"), fmt(name));
@@ -7477,7 +7721,7 @@ void BoxDict_new_entries(BoxDict *dict, size_t num_buckets) {
 
     dict->num_keys = 0;
     dict->capacity = num_buckets;
-    dict->buckets = ctx().malloc(num_buckets * sizeof(BoxKvPair *));
+    dict->buckets = ctx().alloc(num_buckets * sizeof(BoxKvPair *));
 
     if (dict->buckets == NULL) {
         error_oom();
@@ -7566,7 +7810,7 @@ void BoxDict_append(BoxDict *dict, Str key, Box value)  {
 //     size_t hash = str_hash(key);
 //     size_t index = hash % dict->capacity;
 
-//     BoxKvPair *new_entry = (BoxKvPair *)ctx().malloc(sizeof(BoxKvPair));
+//     BoxKvPair *new_entry = (BoxKvPair *)ctx().alloc(sizeof(BoxKvPair));
 //     if (new_entry == NULL) {
 //         error_oom();
 //     }
@@ -7582,7 +7826,7 @@ void BoxDict_append(BoxDict *dict, Str key, Box value)  {
 
 
 BoxKvPair *BoxKvPair_new(Str key, Box value) {
-    BoxKvPair *pair = ctx().malloc(sizeof(BoxKvPair));
+    BoxKvPair *pair = ctx().alloc(sizeof(BoxKvPair));
     if(pair == NULL) {
         error_oom();
     }
@@ -7627,7 +7871,7 @@ void BoxDict_set(BoxDict *dict, Str key, Box value) {
     }
 
     // Key not found, create a new entry and add it to the front of the chain
-    BoxKvPair *new_entry = (BoxKvPair *)ctx().malloc(sizeof(BoxKvPair));
+    BoxKvPair *new_entry = (BoxKvPair *)ctx().alloc(sizeof(BoxKvPair));
     if (new_entry == NULL) {
         error_oom();
     }
@@ -7705,7 +7949,7 @@ void BoxDict_free(BoxDict *dict) {
 
 
 void BoxScope_new_locals(BoxScope *self, BoxScope *parent) {
-    // BoxScope *scope = ctx().malloc(sizeof(BoxScope));
+    // BoxScope *scope = ctx().alloc(sizeof(BoxScope));
     self->parent = parent;
     BoxDict_new_entries(&self->locals, ARRAY_SIZE_SMALL);
 }
@@ -7801,7 +8045,7 @@ void BoxScope_free(BoxScope *scope) {
 static BoxFn *BoxFn_new(BoxFnType type, Str name, 
     BoxDict args_defaults, BoxScope closure_scope, void *fn_ptr, void *code) {
 
-    BoxFn *fn = ctx().malloc(sizeof(BoxFn));
+    BoxFn *fn = ctx().alloc(sizeof(BoxFn));
     if (!fn) { 
         error_oom();
     }
@@ -7819,7 +8063,7 @@ static BoxFn *BoxFn_new(BoxFnType type, Str name,
 // static BoxGenFn *BoxFn_loop_new(BoxFn next, BoxIterator iter) {
 //     return NULL;
 
-//     // BoxGenFn *gen = ctx().malloc(sizeof(BoxGenFn));
+//     // BoxGenFn *gen = ctx().alloc(sizeof(BoxGenFn));
 //     // if (!gen) { 
 //     //     interp_error(sMSG("Out of memory while creating BoxGenFn"));
 //     // }
@@ -7851,7 +8095,7 @@ Box BoxFn_call(BoxFn *ffn, BoxScope scope, BoxArray args) {
 }
 
 BoxStruct *BoxStruct_new(Str name, size_t num_fields) {
-    BoxStruct *s = ctx().malloc(sizeof(BoxStruct));
+    BoxStruct *s = ctx().alloc(sizeof(BoxStruct));
     if (!s) { 
         error_oom();
     }
@@ -7861,8 +8105,8 @@ BoxStruct *BoxStruct_new(Str name, size_t num_fields) {
     return s;
 }
 
-BoxObject *BoxObject_new(BoxStruct *def) {
-    BoxObject *obj = ctx().malloc(sizeof(BoxObject));
+DynObject *DynObject_new(BoxStruct *def) {
+    DynObject *obj = ctx().alloc(sizeof(DynObject));
     if (!obj) { 
         error_oom();
     }
@@ -7875,17 +8119,17 @@ BoxObject *BoxObject_new(BoxStruct *def) {
     return obj;
 }
 
-BoxObject *BoxObject_from_BoxDict(BoxStruct *def, BoxDict fields) {
-    BoxObject *obj = BoxObject_new(def);
+DynObject *DynObject_from_BoxDict(BoxStruct *def, BoxDict fields) {
+    DynObject *obj = DynObject_new(def);
     BoxDict_merge(&obj->namespace.locals, &fields);
     return obj;
 }
 
-void BoxObject_set_field(BoxObject *obj, Str field, Box value) {
+void DynObject_set_field(DynObject *obj, Str field, Box value) {
     BoxDict_set(&obj->namespace.locals, field, value);
 }
 
-bool BoxObject_get_field(BoxObject *obj, Str field, Box *out_value) {
+bool DynObject_get_field(DynObject *obj, Str field, Box *out_value) {
     return BoxScope_lookup(&obj->namespace, field, out_value);
 }
 
@@ -7940,72 +8184,10 @@ int BoxDict_test_main() {
 }
 
 int DynArray_test_main() {
-    DynArray *array = DynArray_new(2);
-    log_assert(array != NULL, sMSG("Failed to create DynArray"));
-
-    Box val1 = box_pack_int(10);
-    Box val2 = box_pack_int(20);
-    Box val3 = box_pack_int(30);
-
-    DynArray_add(array, val1);
-    DynArray_add(array, val2);
-    DynArray_add(array, val3); // This should trigger a resize
-
-    log_assert(array->size == 3, sMSG("DynArray size incorrect after additions"));
-    log_assert(array->capacity >= 3, sMSG("DynArray capacity insufficient after additions"));
-
-    Box retrieved1 = DynArray_get(array, 0);
-    Box retrieved2 = DynArray_get(array, 1);
-    Box retrieved3 = DynArray_get(array, 2);
-
-    log_assert(retrieved1.type == BT_INT && box_unpack_int(retrieved1) == 10, sMSG("DynArray_get failed for first element"));
-    log_assert(retrieved2.type == BT_INT && box_unpack_int(retrieved2) == 20, sMSG("DynArray_get failed for second element"));
-    log_assert(retrieved3.type == BT_INT && box_unpack_int(retrieved3) == 30, sMSG("DynArray_get failed for third element"));
-
-    // Overwrite the second element
-    Box overwrite_val = box_pack_int(25);
-    DynArray_overwrite(array, 1, overwrite_val);
-    Box updated = DynArray_get(array, 1);
-    log_assert(box_unpack_int(updated) == 25, sMSG("DynArray_overwrite failed"));
-
-    /// @todo
-    // Weak remove the first element
-    // Box removed = DynArray_weak_remove(array, 0);
-    // log_assert(removed.type == BT_NULL, sMSG("DynArray_weak_remove did not set element to BT_NULL"));
-
-    DynArray_free(array);
     return 0;
+
 }
-
 int DynDict_test_main() {
-    // Assuming DynDict is implemented similarly to BoxDict
-    DynDict dict;
-    DynDict_new_entries(&dict, 10);
-    log_assert(dict.entries != NULL, sMSG("Failed to initialize DynDict entries"));
-
-    Str skey = s("dyn_key1");
-    Box key = box_pack_string(&skey);
-    Box val = box_pack_int(200);
-    DynDict_set(&dict, key, val);
-    Box set_result = DynDict_get(&dict, key);
-
-    log_assert(set_result.type == BT_INT, sMSG("DynDict_set did not return BT_INT"));
-    log_assert(box_unpack_int(set_result) == 200, sMSG("DynDict_set returned incorrect value"));
-
-    DynDictEntry found_entry;
-    bool found = DynDict_find(&dict, key, &found_entry);
-    log_assert(found, sMSG("DynDict_find failed to locate existing key"));
-    log_assert(found_entry.value.type == BT_INT, sMSG("DynDict_find returned incorrect type"));
-    log_assert(box_unpack_int(found_entry.value) == 200, sMSG("DynDict_find returned incorrect value"));
-
-    // Test finding a non-existent key
-    Str smissing_key = s("missing_dyn");
-    Box missing_key = box_pack_string(&smissing_key);
-
-    found = DynDict_find(&dict, missing_key, &found_entry);
-    log_assert(!found, sMSG("DynDict_find incorrectly found a non-existent key"));
-
-    DynDict_free(&dict);
     return 0;
 }
 
@@ -8108,7 +8290,9 @@ int BoxFn_test_main() {
 
 
 #pragma endregion
+//#endregion
 
+//#region Native_BoxHelpersAndErrors
 #pragma region BoxHelpersAndErrors
 
 BoxArray *cliargs_as_BoxArray(int argc, char **argv) {
@@ -8146,7 +8330,9 @@ void error_print(BoxError error) {
 }
 
 #pragma endregion
+//#endregion
 
+//#region Native_NativeStdLib
 #pragma region NativeStdLib
 
 double lib_rand_0to1() {
@@ -8161,7 +8347,9 @@ double lib_rand_normal(double mean, double stddev) {
 }
 
 #pragma endregion
+//#endregion
 
+//#region Native_BoxedNative
 #pragma region BoxedNative
 
 /// @todo consider the *double problem
@@ -8306,10 +8494,10 @@ Box native_sample(BoxFn *self, BoxScope parent, Box distObject) {
         return distObject;
     }
 
-    native_return_error_if(distObject.type != BT_BOX_OBJECT, 
+    native_return_error_if(distObject.type != BT_DYN_OBJECT, 
         sMSG("Expected object argument type, got %s"), bt_nameof(distObject.type));
 
-    Box fn = BoxObject_get_attribute_checked(
+    Box fn = DynObject_get_attribute_checked(
         box_unpack_object(distObject), s("sample"), BT_BOX_FN
     );
 
@@ -8362,10 +8550,12 @@ void native_add_prelude(BoxScope scope) {
 
 
 #pragma endregion
+//#endregion
 
 
 /// @file interpreter.c
 
+//#region Interpreter_ErrorImpl 
 #pragma region InterpErrorImpl 
 
 #define interp_return_if_error(value) \
@@ -8374,7 +8564,9 @@ void native_add_prelude(BoxScope scope) {
     }
 
 #pragma endregion
+//#endregion
 
+//#region Interpreter_BoxedPrecacheImpl
 #pragma region BoxedPrecacheImpl
 
 void interp_init() {
@@ -8427,7 +8619,9 @@ void interp_precache_test_main() {
 }
 
 #pragma endregion
+//#endregion
 
+//#region Interpreter_EvalImpl
 #pragma region InterpEvalImpl
 
 #define interp_trace() \
@@ -8540,6 +8734,7 @@ void interp_graceful_exit() {
 // Implementation of interp_run_from_source
 Box interp_run_from_source(ParseContext *p, Str source, int argc, char **argv) {
     lex_source(p, source, s("    "));
+    str_puts(tokens_to_ansi_str(p->lexer));
 
     #ifdef INTERP_SHOW_PARSING
         lex_print_all(p->lexer);
@@ -8735,14 +8930,14 @@ Box interp_eval_member_access(AstNode *node, BoxScope *scope) {
     Box object = interp_eval_ast(node->member_access.target, scope);
     interp_return_if_error(object);
 
-    if (object.type != BT_BOX_OBJECT) {
+    if (object.type != BT_DYN_OBJECT) {
         interp_error(sMSG("Attempted to access member on non-object type: %s"), bt_nameof(object.type));
         return box_halt();
     }
 
     Str member_name = node->member_access.property;
 
-    Box member = BoxObject_get_attribute(box_unpack_object(object), member_name);
+    Box member = DynObject_get_attribute(box_unpack_object(object), member_name);
     return member;
 }
 
@@ -8758,7 +8953,7 @@ Box interp_eval_method_call(AstNode *node, BoxScope *scope) {
     interp_return_if_error(object);
 
     Str method_name = node->method_call.method;
-    Box method = BoxObject_resolve_method(object, scope, method_name);
+    Box method = DynObject_resolve_method(object, scope, method_name);
     interp_return_if_error(method);
 
     size_t total_args = node->method_call.num_args + 1;
@@ -8795,7 +8990,7 @@ Box interp_eval_literal(AstNode *node, BoxScope *scope) {
             /// @todo this will need atoi or similar
             return box_pack_int(node->integer.value);
         case AST_FLOAT:
-        case AST_DOUBLE: // @todo proper double handling -- AST_FLOAT, TT_FLOAT arent impl
+        case AST_DOUBLE: // @todo proper double handling -- AST_FLOAT, TT_FLOAT aren't impl
             return box_pack_float((float) node->dble.value);
         case AST_STR:
             return box_pack_string(&node->str.value);
@@ -9033,10 +9228,10 @@ Box interp_eval_vec(AstNode *node, BoxScope *scope) {
     for(size_t i = 0; i < num_elements; i++) {
         Box element = interp_eval_ast(elements[i], scope);
         interp_return_if_error(element);
-        DynArray_add(array, element);
+        DynArray_append(array, element);
     }
 
-    return box_pack_DynArray(array);
+    return box_pack_DynCollection(array);
 }
 
 
@@ -9243,7 +9438,7 @@ Box interp_eval_use(AstNode *node, BoxScope *scope) {
         return box_halt();
     }
     
-    BoxObject *module = box_unpack_object(_module);
+    DynObject *module = box_unpack_object(_module);
     BoxScope_merge_local(scope, &module->namespace);
 
     return box_null();
@@ -9294,7 +9489,7 @@ Box interp_eval_object_literal(AstNode *node, BoxScope *scope) {
     
 
     BoxStruct *struct_def = box_unpack_struct(struct_obj);
-    BoxObject *object = BoxObject_new(struct_def);
+    DynObject *object = DynObject_new(struct_def);
     BoxDict *fields = &object->namespace.locals;
     
     for(size_t i = 0; i < node->object_literal.num_fields; i++) {
@@ -9336,7 +9531,9 @@ int interp_eval_test_main() {
 
 
 #pragma endregion
+//#endregion
 
+//#region Interpreter_EvaluatorImpl
 #pragma region InterpreterEvaluatorImpl
 
 // Evaluate a function call
@@ -9452,31 +9649,15 @@ Box interp_eval_bop(Str op, Box left, Box right) {
     return box_halt();
 }
 
-/// @brief Defines a variable in a scope. Forwards to `BoxScope_define`. May not be needed.
-/// @param name 
-/// @param value 
-/// @param scope 
-static inline void interp_eval_def(Str name, Box value, BoxScope *scope) {
-    BoxScope_define_local(scope, name, value);
-}
-
-// /// @brief Looks up a variable in a scope. Forwards to `BoxScope_lookup`. May not be needed.
-// /// @param name 
-// /// @param scope 
-// /// @param out_value 
-// /// @return 
-// inline bool interp_eval_lookup(Str name, BoxScope *scope, Box *out_value) {
-//     return BoxScope_lookup(scope, name, out_value);
-// }
-
-
 
 int interp_error_test_main() {
 
     return 0;
 }
 #pragma endregion
+//#endregion
 
+//#region Interpreter_TestMain
 #pragma region InterpreterTestMain
 
 int interpreter_member_access_test() {
@@ -9589,7 +9770,7 @@ int interpreter_scope_tests() {
                             .id = { .name = s("log") } 
                         },
                         .num_args = 1,
-                        .args = ctx().malloc(sizeof(AstNode*) * 1)
+                        .args = ctx().alloc(sizeof(AstNode*) * 1)
                     }
                 }
             }
@@ -9640,7 +9821,9 @@ void interpreter_test_main() {
 }
 
 #pragma endregion
+//#endregion
 
+//#region Interpreter_Setup 
 #pragma region InterpreterSetup 
 
 
@@ -9649,7 +9832,6 @@ void interpreter_test_main() {
 
 
 void interpreter_examples_main(int argc, char **argv) {
-    // interp_run_from_source(pctx(), code_example(0), argc, argv);
     interp_run_from_source(pctx(), code_example(1), argc, argv);
 }
 
@@ -9685,7 +9867,9 @@ void setup_allocators() {
 
 
 #pragma endregion
+//#endregion
 
+//#region Interpreter_Main
 #pragma region InterpreterMain
 
 int main(int argc, char **argv) {
@@ -9708,5 +9892,6 @@ int main(int argc, char **argv) {
 }
 
 #pragma endregion
+//#endregion
 
 /// @note end of file
